@@ -1,0 +1,986 @@
+[
+  {
+    "stimuli": "Practice04F01.wav",
+    "targetword": "tea",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "Practice05F01.wav",
+    "targetword": "tea",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "Practice06F01.wav",
+    "targetword": "tea",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "Practice07F01.wav",
+    "targetword": "tea",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "101Y1F01.wav",
+    "targetword": "appreciate",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "102Y1F01.wav",
+    "targetword": "executive",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "103Y1F01.wav",
+    "targetword": "reception",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "104Y1F01.wav",
+    "targetword": "refreshment",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "105Y1F01.wav",
+    "targetword": "require",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "106Y1F01.wav",
+    "targetword": "distribute",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "107Y1F01.wav",
+    "targetword": "excursion",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "108Y1F01.wav",
+    "targetword": "extension",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "109Y1F01.wav",
+    "targetword": "investment",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "110Y1F01.wav",
+    "targetword": "prestigious",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "111Y1F01.wav",
+    "targetword": "promotion",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "112Y1F01.wav",
+    "targetword": "resume",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "113Y1F01.wav",
+    "targetword": "estate",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "114Y1F01.wav",
+    "targetword": "expand",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "115Y1F01.wav",
+    "targetword": "expense",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "116Y1F01.wav",
+    "targetword": "autobiography",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "117Y1F01.wav",
+    "targetword": "complimentary",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "118Y1F01.wav",
+    "targetword": "considerably",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "119Y1F01.wav",
+    "targetword": "contemporary",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "120Y1F01.wav",
+    "targetword": "cooperation",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "121Y1F01.wav",
+    "targetword": "appliance",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "122Y1F01.wav",
+    "targetword": "competitor",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "123Y1F01.wav",
+    "targetword": "destination",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "124Y1F01.wav",
+    "targetword": "facility",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "125Y1F01.wav",
+    "targetword": "medicinal",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "126Y1F01.wav",
+    "targetword": "regional",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "127Y1F01.wav",
+    "targetword": "register",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "128Y1F01.wav",
+    "targetword": "accountant",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "129Y1F01.wav",
+    "targetword": "acquire",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "130Y1F01.wav",
+    "targetword": "assembly",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "131Y1F01.wav",
+    "targetword": "committee",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "132Y1F01.wav",
+    "targetword": "correction",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "133Y1F01.wav",
+    "targetword": "division",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "134Y1F01.wav",
+    "targetword": "financial",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "135Y1F01.wav",
+    "targetword": "inquire",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "136Y1F01.wav",
+    "targetword": "solution",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "137Y1F01.wav",
+    "targetword": "substantial",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "138Y1F01.wav",
+    "targetword": "locate",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "139Y1F01.wav",
+    "targetword": "antique",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "140Y1F01.wav",
+    "targetword": "arise",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "141Y1F01.wav",
+    "targetword": "brochure",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "142Y1F01.wav",
+    "targetword": "conduct",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "143Y1F01.wav",
+    "targetword": "confirm",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "144Y1F01.wav",
+    "targetword": "deserve",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "145Y1F01.wav",
+    "targetword": "equip",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "146Y1F01.wav",
+    "targetword": "frequent",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "147Y1F01.wav",
+    "targetword": "greenhouse",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "148Y1F01.wav",
+    "targetword": "provide",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "149Y1F01.wav",
+    "targetword": "screenplay",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "150Y1F01.wav",
+    "targetword": "launch",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "151Y1F01.wav",
+    "targetword": "praise",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "152Y1F01.wav",
+    "targetword": "stove",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "153Y1F01.wav",
+    "targetword": "photocopier",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "154Y1F01.wav",
+    "targetword": "culinary",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "155Y1F01.wav",
+    "targetword": "supervisor",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "156Y1F01.wav",
+    "targetword": "temporary",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "157Y1F01.wav",
+    "targetword": "applicant",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "158Y1F01.wav",
+    "targetword": "avenue",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "159Y1F01.wav",
+    "targetword": "cabinet",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "160Y1F01.wav",
+    "targetword": "challenging",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "161Y1F01.wav",
+    "targetword": "conference",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "162Y1F01.wav",
+    "targetword": "corporate",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "163Y1F01.wav",
+    "targetword": "furniture",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "164Y1F01.wav",
+    "targetword": "headquarter",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "165Y1F01.wav",
+    "targetword": "tentative",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "166Y1F01.wav",
+    "targetword": "cater",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "167Y1F01.wav",
+    "targetword": "colleague",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "168Y1F01.wav",
+    "targetword": "current",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "169Y1F01.wav",
+    "targetword": "deadline",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "170Y1F01.wav",
+    "targetword": "diner",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "171Y1F01.wav",
+    "targetword": "highway",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "172Y1F01.wav",
+    "targetword": "hire",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "173Y1F01.wav",
+    "targetword": "packet",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "174Y1F01.wav",
+    "targetword": "patient",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "175Y1F01.wav",
+    "targetword": "presence",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "176Y1F01.wav",
+    "targetword": "publish",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "177Y1F01.wav",
+    "targetword": "transfer",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "178Y1F01.wav",
+    "targetword": "bin",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "179Y1F01.wav",
+    "targetword": "book",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "180Y1F01.wav",
+    "targetword": "fare",
+    "ANSWER": "適切",
+    "condition": "Hit"
+  },
+  {
+    "stimuli": "101N1F01.wav",
+    "targetword": "appreciate",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "102N1F01.wav",
+    "targetword": "executive",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "103N1F01.wav",
+    "targetword": "reception",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "104N1F01.wav",
+    "targetword": "refreshment",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "105N1F01.wav",
+    "targetword": "require",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "106N1F01.wav",
+    "targetword": "distribute",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "107N1F01.wav",
+    "targetword": "excursion",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "108N1F01.wav",
+    "targetword": "extension",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "109N1F01.wav",
+    "targetword": "investment",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "110N1F01.wav",
+    "targetword": "prestigious",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "111N1F01.wav",
+    "targetword": "promotion",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "112N1F01.wav",
+    "targetword": "resume",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "113N1F01.wav",
+    "targetword": "estate",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "114N1F01.wav",
+    "targetword": "expand",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "115N1F01.wav",
+    "targetword": "expense",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "116N1F01.wav",
+    "targetword": "autobiography",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "117N1F01.wav",
+    "targetword": "complimentary",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "118N1F01.wav",
+    "targetword": "considerably",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "119N1F01.wav",
+    "targetword": "contemporary",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "120N1F01.wav",
+    "targetword": "cooperation",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "121N1F01.wav",
+    "targetword": "appliance",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "122N1F01.wav",
+    "targetword": "competitor",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "123N1F01.wav",
+    "targetword": "destination",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "124N1F01.wav",
+    "targetword": "facility",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "125N1F01.wav",
+    "targetword": "medicinal",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "126N1F01.wav",
+    "targetword": "regional",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "127N1F01.wav",
+    "targetword": "register",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "128N1F01.wav",
+    "targetword": "accountant",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "129N1F01.wav",
+    "targetword": "acquire",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "130N1F01.wav",
+    "targetword": "assembly",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "131N1F01.wav",
+    "targetword": "committee",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "132N1F01.wav",
+    "targetword": "correction",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "133N1F01.wav",
+    "targetword": "division",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "134N1F01.wav",
+    "targetword": "financial",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "135N1F01.wav",
+    "targetword": "inquire",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "136N1F01.wav",
+    "targetword": "solution",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "137N1F01.wav",
+    "targetword": "substantial",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "138N1F01.wav",
+    "targetword": "locate",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "139N1F01.wav",
+    "targetword": "antique",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "140N1F01.wav",
+    "targetword": "arise",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "141N1F01.wav",
+    "targetword": "brochure",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "142N1F01.wav",
+    "targetword": "conduct",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "143N1F01.wav",
+    "targetword": "confirm",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "144N1F01.wav",
+    "targetword": "deserve",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "145N1F01.wav",
+    "targetword": "equip",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "146N1F01.wav",
+    "targetword": "frequent",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "147N1F01.wav",
+    "targetword": "greenhouse",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "148N1F01.wav",
+    "targetword": "provide",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "149N1F01.wav",
+    "targetword": "screenplay",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "150N1F01.wav",
+    "targetword": "launch",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "151N1F01.wav",
+    "targetword": "praise",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "152N1F01.wav",
+    "targetword": "stove",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "153N1F01.wav",
+    "targetword": "photocopier",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "154N1F01.wav",
+    "targetword": "culinary",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "155N1F01.wav",
+    "targetword": "supervisor",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "156N1F01.wav",
+    "targetword": "temporary",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "157N1F01.wav",
+    "targetword": "applicant",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "158N1F01.wav",
+    "targetword": "avenue",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "159N1F01.wav",
+    "targetword": "cabinet",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "160N1F01.wav",
+    "targetword": "challenging",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "161N1F01.wav",
+    "targetword": "conference",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "162N1F01.wav",
+    "targetword": "corporate",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "163N1F01.wav",
+    "targetword": "furniture",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "164N1F01.wav",
+    "targetword": "headquarter",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "165N1F01.wav",
+    "targetword": "tentative",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "166N1F01.wav",
+    "targetword": "cater",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "167N1F01.wav",
+    "targetword": "colleague",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "168N1F01.wav",
+    "targetword": "current",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "169N1F01.wav",
+    "targetword": "deadline",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "170N1F01.wav",
+    "targetword": "diner",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "171N1F01.wav",
+    "targetword": "highway",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "172N1F01.wav",
+    "targetword": "hire",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "173N1F01.wav",
+    "targetword": "packet",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "174N1F01.wav",
+    "targetword": "patient",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "175N1F01.wav",
+    "targetword": "presence",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "176N1F01.wav",
+    "targetword": "publish",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "177N1F01.wav",
+    "targetword": "transfer",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "178N1F01.wav",
+    "targetword": "bin",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "179N1F01.wav",
+    "targetword": "book",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  },
+  {
+    "stimuli": "180N1F01.wav",
+    "targetword": "fare",
+    "ANSWER": "不適切",
+    "condition": "CR"
+  }
+]

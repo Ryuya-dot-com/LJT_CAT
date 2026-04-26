@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>語彙意味判断テスト (制約付きCAT)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260426c" />
+</head>
+<body>
+  <div id="browser-warning" class="hidden">
+    <p data-i18n-html="browserWarning">このテストは <strong>Google Chrome</strong> のブラウザでのみご利用いただけます。<br />
+       PC の Chrome でこのページを開き直してください。</p>
+  </div>
+
+  <div id="app" class="container">
+    <header>
+      <h1 data-i18n="appTitle">語彙意味判断テスト</h1>
+      <p class="subtitle" data-i18n="subtitleAdaptive">Blueprint CAT</p>
+    </header>
+
+    <main id="stage-container">
+      <section id="stage-welcome" class="stage">
+        <h2 data-i18n="welcomeTitle">ようこそ</h2>
+        <p data-i18n-html="welcomeBody">このテストでは、英語の短い文を聞いていただきます。
+          それぞれの文には<strong>1つの英単語</strong>が含まれています。
+          文の中でその英単語の使われ方が<strong>意味的に適切か、不適切か</strong>を判断してください。</p>
+        <ul class="note-list">
+          <li data-i18n-html="noteAutoplay">各問題では、中央の「+」のあと音声が<strong>自動で1回</strong>再生されます。</li>
+          <li data-i18n-html="notePractice">練習が<strong>4問</strong>あり、そのあと本試行に進みます。</li>
+          <li data-i18n="noteAdaptiveLength">本試行の問題数は回答状況に応じて変わります。</li>
+          <li data-i18n-html="noteKeys">音声終了後、表示された単語に対してキーボードの <strong>F</strong> / <strong>J</strong> で回答します。</li>
+          <li data-i18n="noteHeadphones">ヘッドホン / イヤホンの使用を強く推奨します。</li>
+        </ul>
+        <div id="research-panel" class="research-panel hidden"></div>
+        <h3 data-i18n="participantInfo">参加者情報</h3>
+        <form id="participant-form">
+          <label>
+            <span data-i18n="languageLabel">表示言語</span>
+            <select id="input-lang" autocomplete="off">
+              <option value="ja">日本語</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <label>
+            <span><span data-i18n="participantId">参加者ID</span> <span class="required">*</span></span>
+            <input type="text" id="input-pid" required maxlength="64" autocomplete="off" />
+          </label>
+          <label>
+            <span><span data-i18n="participantName">お名前</span> <span class="required">*</span></span>
+            <input type="text" id="input-name" required maxlength="64" autocomplete="off" />
+          </label>
+          <button type="submit" class="primary-btn" data-i18n="consentStart">同意して開始</button>
+        </form>
+        <p class="disclaimer" data-i18n="disclaimer">
+          回答データは終了時にあなたのコンピュータに保存されます。
+          ダウンロードされたファイルは研究者の指示にしたがって共有してください。
+        </p>
+      </section>
+
+      <section id="stage-instructions" class="stage hidden">
+        <h2 data-i18n="instructionsTitle">教示</h2>
+        <p data-i18n="instructionsLead">これから4問の練習を行います。各問題では:</p>
+        <ol>
+          <li data-i18n-html="instructionFixation">中央の <strong>+</strong> を見てください。音声は自動で再生されます。</li>
+          <li data-i18n-html="instructionDecision">音声が終わったら、表示される英単語の使い方が
+              <span class="yes-color"><strong>「適切」</strong></span>か
+              <span class="no-color"><strong>「不適切」</strong></span>かを選んでください。</li>
+          <li id="key-instruction">回答キーを読み込み中です。</li>
+          <li id="timing-instruction">制限時間設定を読み込み中です。</li>
+          <li data-i18n="instructionFeedback">練習では正解・不正解のフィードバックが表示されます。
+              本試行ではフィードバックはありません。</li>
+        </ol>
+        <button id="btn-start-practice" class="primary-btn" data-i18n="startPractice">練習を開始する</button>
+      </section>
+
+      <section id="stage-trial" class="stage hidden">
+        <div class="trial-header">
+          <span id="trial-label"></span>
+          <span id="trial-counter" role="status" aria-live="polite" aria-atomic="true"></span>
+        </div>
+        <div class="trial-body">
+          <div id="fixation-cross" class="fixation-cross hidden" aria-hidden="true">+</div>
+          <div class="audio-area">
+            <button id="btn-play" class="primary-btn" aria-describedby="play-status" data-i18n="playAudio">音声を再生</button>
+            <p id="play-status" class="play-status" role="status" aria-live="polite"></p>
+          </div>
+          <div id="target-word-area" class="hidden" role="region" aria-live="polite">
+            <p class="target-word" id="target-word-display"></p>
+            <div class="response-btns">
+              <button id="btn-yes" class="response-btn yes-btn" aria-label="適切 (Yes)">適切</button>
+              <button id="btn-no"  class="response-btn no-btn" aria-label="不適切 (No)">不適切</button>
+            </div>
+            <div id="response-timebar" class="response-timebar hidden" aria-hidden="true">
+              <div id="response-timebar-fill" class="response-timebar-fill"></div>
+            </div>
+          </div>
+        </div>
+        <div id="feedback-area" class="hidden" role="status" aria-live="polite"></div>
+        <audio id="audio-player" preload="auto"></audio>
+      </section>
+
+      <section id="stage-transition" class="stage hidden">
+        <h2 data-i18n="transitionTitle">練習は以上です</h2>
+        <p data-i18n-html="transitionBody">これから本試行に入ります。本試行では<strong>フィードバックは表示されません</strong>。
+           音声は<strong>1回のみ</strong>再生されます。準備ができたら開始してください。</p>
+        <button id="btn-start-main" class="primary-btn" data-i18n="startMain">本試行を開始する</button>
+      </section>
+
+      <section id="stage-result" class="stage hidden">
+        <h2 data-i18n="resultTitle">テスト終了</h2>
+        <p data-i18n="resultThanks">ご協力ありがとうございました。</p>
+        <div class="download-status" id="download-status" role="status" aria-live="polite" data-i18n="savingStatus">
+          結果を保存中...
+        </div>
+        <button id="btn-download-again" class="secondary-btn hidden" data-i18n="downloadAgain">
+          もう一度ダウンロードする
+        </button>
+        <p class="end-note" data-i18n="endNote">
+          結果ファイルがダウンロードフォルダに保存されました。
+          研究者の指示にしたがって共有してください。
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <small data-i18n="appTitle">語彙意味判断テスト</small>
+    </footer>
+  </div>
+
+  <script src="../lib/xlsx.full.min.js?v=20260426c"></script>
+  <script src="config.js?v=20260426c"></script>
+  <script src="../js/cat_1f.js?v=20260426c"></script>
+  <script src="../js/cat_2f.js?v=20260426c"></script>
+  <script src="../js/xlsx_export.js?v=20260426c"></script>
+  <script src="../js/cat_app.js?v=20260426c"></script>
+</body>
+</html>

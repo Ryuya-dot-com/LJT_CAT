@@ -1,0 +1,26 @@
+[
+  {
+    "display": "Practice1",
+    "stimuli": "Practice04F01.wav",
+    "ANSWER": "適切",
+    "targetword": "tea"
+  },
+  {
+    "display": "Practice2",
+    "stimuli": "Practice05F01.wav",
+    "ANSWER": "適切",
+    "targetword": "tea"
+  },
+  {
+    "display": "Practice3",
+    "stimuli": "Practice06F01.wav",
+    "ANSWER": "不適切",
+    "targetword": "tea"
+  },
+  {
+    "display": "Practice4",
+    "stimuli": "Practice07F01.wav",
+    "ANSWER": "不適切",
+    "targetword": "tea"
+  }
+]
