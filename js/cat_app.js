@@ -8,6 +8,7 @@
  *                 ?max_play_fails=3 (audio failure skip threshold)
  *                 ?keymap=counterbalanced|f_appropriate|j_appropriate
  *                 ?timing=timed|untimed &response_window_ms=1250
+ *                 ?auto_play_audio=1|0 &fixation_ms=500 &post_response_ms=350 &max_condition_run=2
  *                 ?lang=ja|en
  *                 ?research=1 (show calibration / item-bank audit panel)
  *
@@ -21,7 +22,7 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '2.4.0';
+  const APP_VERSION = '2.5.0';
   const APP_CONFIG = Object.assign({
     delivery: 'landing',
     assetBase: '.',
@@ -39,7 +40,11 @@
     quota_tol: 0.20,
     timing: 'timed',
     response_window_ms: 1250,
-    lang: 'ja'
+    lang: 'ja',
+    auto_play_audio: true,
+    fixation_ms: 500,
+    post_response_ms: 350,
+    max_condition_run: 2
   }, APP_CONFIG.defaults || {});
 
   const I18N = {
@@ -53,6 +58,7 @@
       welcomeTitle: 'ようこそ',
       welcomeBody: 'このテストでは、英語の短い文を聞いていただきます。それぞれの文には<strong>1つの英単語</strong>が含まれています。文の中でその英単語の使われ方が<strong>意味的に適切か、不適切か</strong>を判断してください。',
       noteAutoplay: '各問題では、中央の「+」のあと音声が<strong>自動で1回</strong>再生されます。',
+      noteManualPlay: '各問題では、中央の「+」のあと表示される<strong>音声再生ボタン</strong>を押すと音声が1回再生されます。',
       notePractice: '練習が<strong>4問</strong>あり、そのあと本試行に進みます。',
       noteFixedLength: '本試行は<strong>40問</strong>です。',
       noteAdaptiveLength: '本試行の問題数は回答状況に応じて変わります。',
@@ -67,6 +73,7 @@
       instructionsTitle: '教示',
       instructionsLead: 'これから4問の練習を行います。各問題では:',
       instructionFixation: '中央の <strong>+</strong> を見てください。音声は自動で再生されます。',
+      instructionManualPlay: '中央の <strong>+</strong> を見てください。そのあと表示されるボタンで音声を再生してください。',
       instructionDecision: '音声が終わったら、表示される英単語の使い方が <span class="yes-color"><strong>「適切」</strong></span>か <span class="no-color"><strong>「不適切」</strong></span>かを選んでください。',
       instructionFeedback: '練習では正解・不正解のフィードバックが表示されます。本試行ではフィードバックはありません。',
       startPractice: '練習を開始する',
@@ -135,6 +142,28 @@
       researchProtocolTitle: '実施プロトコル設定',
       researchProtocolNote: 'ここで設定した内容は参加者用URLとExcelの protocol_manifest に保存されます。参加者画面では変更できません。',
       researchTimingModeLabel: '時間制限',
+      researchDeliveryModeLabel: '実施モード',
+      researchFixed40Option: '固定40問',
+      researchAdaptiveOption: 'Adaptive CAT',
+      researchKeymapLabel: 'F/Jキー割当',
+      researchKeymapCounterbalanced: '参加者IDでカウンターバランス',
+      researchKeymapFAppropriate: 'F = 適切 / J = 不適切',
+      researchKeymapJAppropriate: 'F = 不適切 / J = 適切',
+      researchAudioAutoplayLabel: '音声自動再生',
+      researchAutoplayOn: '自動再生',
+      researchAutoplayOff: '手動再生',
+      researchFixationMsLabel: '注視点時間 (ms)',
+      researchPostResponseMsLabel: '回答後待機時間 (ms)',
+      researchMaxConditionRunLabel: '同一条件の最大連続数',
+      researchMaxPlayFailsLabel: '音声再生失敗の許容回数',
+      researchAdaptiveSettingsTitle: 'Adaptive設定',
+      researchAlgorithmLabel: '項目選択アルゴリズム',
+      researchStopRuleLabel: '停止則',
+      researchMinItemsLabel: '最小項目数',
+      researchMaxItemsLabel: '最大項目数',
+      researchTargetSeLabel: '目標SE',
+      researchStopPserLabel: 'PSER停止しきい値',
+      researchQuotaTolLabel: 'Quota許容幅',
       researchTimedOption: 'Timed',
       researchUntimedOption: 'Untimed',
       researchWindowPresetLabel: 'Timed制限時間',
@@ -171,6 +200,7 @@
       welcomeTitle: 'Welcome',
       welcomeBody: 'In this test, you will hear short English sentences. Each sentence contains <strong>one English word</strong>. Decide whether that word is used in a <strong>semantically appropriate or inappropriate</strong> way in the sentence.',
       noteAutoplay: 'On each trial, audio plays <strong>automatically once</strong> after the central “+”.',
+      noteManualPlay: 'On each trial, press the <strong>play-audio button</strong> shown after the central “+”; the audio plays once.',
       notePractice: 'There are <strong>4 practice trials</strong>, followed by the main test.',
       noteFixedLength: 'The main test has <strong>40 trials</strong>.',
       noteAdaptiveLength: 'The number of main-test trials depends on your responses.',
@@ -185,6 +215,7 @@
       instructionsTitle: 'Instructions',
       instructionsLead: 'You will now complete 4 practice trials. On each trial:',
       instructionFixation: 'Look at the central <strong>+</strong>. The audio will play automatically.',
+      instructionManualPlay: 'Look at the central <strong>+</strong>. Then press the displayed button to play the audio.',
       instructionDecision: 'After the audio ends, decide whether the displayed English word was used <span class="yes-color"><strong>appropriately</strong></span> or <span class="no-color"><strong>inappropriately</strong></span>.',
       instructionFeedback: 'Practice trials show correct/incorrect feedback. Main-test trials do not show feedback.',
       startPractice: 'Start practice',
@@ -253,6 +284,28 @@
       researchProtocolTitle: 'Administration Protocol Settings',
       researchProtocolNote: 'These settings are written to the participant URL and the Excel protocol_manifest sheet. Participants cannot change them.',
       researchTimingModeLabel: 'Timing mode',
+      researchDeliveryModeLabel: 'Delivery mode',
+      researchFixed40Option: 'Fixed 40',
+      researchAdaptiveOption: 'Adaptive CAT',
+      researchKeymapLabel: 'F/J key mapping',
+      researchKeymapCounterbalanced: 'Counterbalanced by participant ID',
+      researchKeymapFAppropriate: 'F = Appropriate / J = Inappropriate',
+      researchKeymapJAppropriate: 'F = Inappropriate / J = Appropriate',
+      researchAudioAutoplayLabel: 'Audio autoplay',
+      researchAutoplayOn: 'Autoplay',
+      researchAutoplayOff: 'Manual play',
+      researchFixationMsLabel: 'Fixation duration (ms)',
+      researchPostResponseMsLabel: 'Post-response delay (ms)',
+      researchMaxConditionRunLabel: 'Maximum same-condition run',
+      researchMaxPlayFailsLabel: 'Allowed audio playback failures',
+      researchAdaptiveSettingsTitle: 'Adaptive Settings',
+      researchAlgorithmLabel: 'Item-selection algorithm',
+      researchStopRuleLabel: 'Stopping rule',
+      researchMinItemsLabel: 'Minimum items',
+      researchMaxItemsLabel: 'Maximum items',
+      researchTargetSeLabel: 'Target SE',
+      researchStopPserLabel: 'PSER stopping threshold',
+      researchQuotaTolLabel: 'Quota tolerance',
       researchTimedOption: 'Timed',
       researchUntimedOption: 'Untimed',
       researchWindowPresetLabel: 'Timed response window',
@@ -344,6 +397,22 @@
     let out = Number.isFinite(parsed) ? parsed : def;
     out = Math.max(min, Math.min(max, out));
     return integer ? Math.round(out) : out;
+  }
+
+  function booleanParam (params, names, def) {
+    const keys = Array.isArray(names) ? names : [names];
+    for (let i = 0; i < keys.length; i++) {
+      const raw = params.get(keys[i]);
+      if (raw === null) continue;
+      const value = String(raw).trim().toLowerCase();
+      if (['1', 'true', 'yes', 'on', 'auto', 'autoplay'].includes(value)) return true;
+      if (['0', 'false', 'no', 'off', 'manual'].includes(value)) return false;
+    }
+    return !!def;
+  }
+
+  function boolToParam (value) {
+    return value ? '1' : '0';
   }
 
   function shuffleCopy (arr) {
@@ -512,6 +581,23 @@
       p, 'response_window_ms',
       Number(presentationOption('responseWindowMs', DEFAULTS.response_window_ms)),
       250, 10000, true);
+    state.params.auto_play_audio = booleanParam(
+      p,
+      ['auto_play_audio', 'autoplay'],
+      !!presentationOption('autoPlayAudio', DEFAULTS.auto_play_audio)
+    );
+    state.params.fixation_ms = boundedNumberParam(
+      p, 'fixation_ms',
+      Number(presentationOption('fixationMs', DEFAULTS.fixation_ms)),
+      0, 3000, true);
+    state.params.post_response_ms = boundedNumberParam(
+      p, 'post_response_ms',
+      Number(presentationOption('postResponseMs', DEFAULTS.post_response_ms)),
+      0, 5000, true);
+    state.params.max_condition_run = boundedNumberParam(
+      p, 'max_condition_run',
+      Number(presentationOption('maxConditionRun', DEFAULTS.max_condition_run)),
+      1, 10, true);
     if (state.params.min_items > state.params.max_items) {
       state.params.min_items = state.params.max_items;
     }
@@ -520,25 +606,16 @@
       state.params.max_items = APP_CONFIG.fixedPerCondition * 2;
       state.stopRule = 'fixed_length';
     } else if (state.delivery === 'adaptive') {
-      const alg = (p.get('algorithm') || APP_CONFIG.defaultAlgorithm || 'blueprint').toLowerCase();
-      state.algorithm = ['blueprint', 'alternating', 'quota'].includes(alg) ? alg : 'blueprint';
-      const rule = (p.get('stop_rule') || APP_CONFIG.defaultStopRule || 'blueprint_pser').toLowerCase();
-      state.stopRule = ['blueprint_pser', 'pser', 'se', 'max_items'].includes(rule)
-        ? rule
-        : 'blueprint_pser';
-      const adaptiveFloor = APP_CONFIG.blueprint && APP_CONFIG.blueprint.minAllowedItems
-        ? APP_CONFIG.blueprint.minAllowedItems
-        : 20;
-      const adaptiveCap = APP_CONFIG.blueprint && APP_CONFIG.blueprint.maxItems
-        ? APP_CONFIG.blueprint.maxItems
-        : 70;
+      state.algorithm = normalizeAlgorithm(p.get('algorithm') || APP_CONFIG.defaultAlgorithm);
+      state.stopRule = normalizeStopRule(p.get('stop_rule') || APP_CONFIG.defaultStopRule);
+      const adaptiveBounds = adaptiveItemBounds();
       state.params.min_items = Math.min(
-        Math.max(state.params.min_items, adaptiveFloor),
-        adaptiveCap
+        Math.max(state.params.min_items, adaptiveBounds.floor),
+        adaptiveBounds.cap
       );
       state.params.max_items = Math.min(
         Math.max(state.params.max_items, state.params.min_items),
-        adaptiveCap
+        adaptiveBounds.cap
       );
     }
     state.session.url_params_raw = u.search || '';
@@ -597,6 +674,7 @@
     });
     const langInput = $('input-lang');
     if (langInput) langInput.value = state.lang;
+    updatePresentationInstruction();
     updateResponseLabels();
     updateKeyInstruction();
     updateTimingInstruction();
@@ -605,6 +683,33 @@
   function presentationOption (name, fallback) {
     const opts = APP_CONFIG.presentation || {};
     return Object.prototype.hasOwnProperty.call(opts, name) ? opts[name] : fallback;
+  }
+
+  function autoPlayAudio () {
+    return !!state.params.auto_play_audio;
+  }
+
+  function fixationMs () {
+    return Number(state.params.fixation_ms);
+  }
+
+  function postResponseMs () {
+    return Number(state.params.post_response_ms);
+  }
+
+  function maxConditionRun () {
+    return Number(state.params.max_condition_run);
+  }
+
+  function updatePresentationInstruction () {
+    const note = document.querySelector('[data-i18n-html="noteAutoplay"]');
+    if (note) note.innerHTML = autoPlayAudio() ? t('noteAutoplay') : t('noteManualPlay');
+    const fixation = document.querySelector('[data-i18n-html="instructionFixation"]');
+    if (fixation) {
+      fixation.innerHTML = autoPlayAudio()
+        ? t('instructionFixation')
+        : t('instructionManualPlay');
+    }
   }
 
   function sleep (ms) {
@@ -623,6 +728,32 @@
     return value === 'untimed' ? 'untimed' : 'timed';
   }
 
+  function normalizeAlgorithm (raw) {
+    const value = String(raw || '').trim().toLowerCase();
+    return ['blueprint', 'alternating', 'quota'].includes(value) ? value : 'blueprint';
+  }
+
+  function normalizeStopRule (raw) {
+    const value = String(raw || '').trim().toLowerCase();
+    return ['blueprint_pser', 'pser', 'se', 'max_items'].includes(value)
+      ? value
+      : 'blueprint_pser';
+  }
+
+  function normalizeDelivery (raw) {
+    const value = String(raw || '').trim().toLowerCase();
+    return value === 'adaptive' ? 'adaptive' : 'fixed40';
+  }
+
+  function adaptiveItemBounds () {
+    const blueprint = APP_CONFIG.blueprint || {};
+    const floorRaw = Number(blueprint.minAllowedItems);
+    const capRaw = Number(blueprint.maxItems);
+    const floor = Number.isFinite(floorRaw) && floorRaw > 0 ? Math.round(floorRaw) : 20;
+    const cap = Number.isFinite(capRaw) && capRaw >= floor ? Math.round(capRaw) : 70;
+    return { floor: floor, cap: Math.max(floor, cap) };
+  }
+
   function isTimed () {
     return state.params.timing === 'timed';
   }
@@ -631,22 +762,113 @@
     return isTimed() ? state.params.response_window_ms : null;
   }
 
-  function buildProtocolURL (keepResearch, timingMode, windowMs) {
+  function deliveryPathname (pathname, delivery) {
+    const target = normalizeDelivery(delivery);
+    const replacement = '/' + target + '/';
+    if (/\/(fixed40|adaptive)\/?$/.test(pathname)) {
+      return pathname.replace(/\/(fixed40|adaptive)\/?$/, replacement);
+    }
+    const withSlash = pathname.endsWith('/') ? pathname : pathname + '/';
+    return withSlash + target + '/';
+  }
+
+  function buildProtocolURL (keepResearch, overrides) {
+    const opts = overrides || {};
     const u = new URL(window.location.href);
-    const mode = normalizeTiming(timingMode || state.params.timing);
+    const delivery = normalizeDelivery(opts.delivery || state.delivery);
+    const mode = normalizeTiming(opts.timing || state.params.timing);
     const ms = boundedNumberValue(
-      windowMs === undefined ? state.params.response_window_ms : windowMs,
+      opts.response_window_ms === undefined
+        ? state.params.response_window_ms
+        : opts.response_window_ms,
       DEFAULTS.response_window_ms,
       250,
       10000,
       true
     );
+    const autoPlay = opts.auto_play_audio === undefined
+      ? autoPlayAudio()
+      : !!opts.auto_play_audio;
+    const fixMs = boundedNumberValue(
+      opts.fixation_ms === undefined ? fixationMs() : opts.fixation_ms,
+      DEFAULTS.fixation_ms,
+      0,
+      3000,
+      true
+    );
+    const postMs = boundedNumberValue(
+      opts.post_response_ms === undefined ? postResponseMs() : opts.post_response_ms,
+      DEFAULTS.post_response_ms,
+      0,
+      5000,
+      true
+    );
+    const maxRun = boundedNumberValue(
+      opts.max_condition_run === undefined ? maxConditionRun() : opts.max_condition_run,
+      DEFAULTS.max_condition_run,
+      1,
+      10,
+      true
+    );
+    const maxFails = boundedNumberValue(
+      opts.max_play_fails === undefined ? state.params.max_play_fails : opts.max_play_fails,
+      DEFAULTS.max_play_fails,
+      0,
+      10,
+      true
+    );
+    const keymap = normalizeKeymap(opts.keymap || state.params.keymap);
+    u.pathname = deliveryPathname(u.pathname, delivery);
     u.searchParams.set('lang', state.lang);
     u.searchParams.set('timing', mode);
+    u.searchParams.set('auto_play_audio', boolToParam(autoPlay));
+    u.searchParams.set('fixation_ms', String(fixMs));
+    u.searchParams.set('post_response_ms', String(postMs));
+    u.searchParams.set('max_condition_run', String(maxRun));
+    u.searchParams.set('max_play_fails', String(maxFails));
+    u.searchParams.set('keymap', keymap);
     if (mode === 'timed') {
       u.searchParams.set('response_window_ms', String(ms));
     } else {
       u.searchParams.delete('response_window_ms');
+    }
+    if (delivery === 'adaptive') {
+      const adaptiveBounds = adaptiveItemBounds();
+      const defaultMinItems = Math.min(
+        Math.max(DEFAULTS.min_items, adaptiveBounds.floor),
+        adaptiveBounds.cap
+      );
+      u.searchParams.set('algorithm', opts.algorithm || state.algorithm || 'blueprint');
+      u.searchParams.set('stop_rule', opts.stop_rule || state.stopRule || 'blueprint_pser');
+      const minItems = boundedNumberValue(
+        opts.min_items === undefined ? state.params.min_items : opts.min_items,
+        defaultMinItems,
+        adaptiveBounds.floor,
+        adaptiveBounds.cap,
+        true
+      );
+      let maxItems = boundedNumberValue(
+        opts.max_items === undefined ? state.params.max_items : opts.max_items,
+        adaptiveBounds.cap,
+        adaptiveBounds.floor,
+        adaptiveBounds.cap,
+        true
+      );
+      if (maxItems < minItems) maxItems = minItems;
+      u.searchParams.set('min_items', String(minItems));
+      u.searchParams.set('max_items', String(maxItems));
+      u.searchParams.set('target_se', String(
+        boundedNumberValue(opts.target_se === undefined ? state.params.target_se : opts.target_se, DEFAULTS.target_se, 0.05, 2.0, false)
+      ));
+      u.searchParams.set('stop_pser', String(
+        boundedNumberValue(opts.stop_pser === undefined ? state.params.stop_pser : opts.stop_pser, DEFAULTS.stop_pser, 0, 1, false)
+      ));
+      u.searchParams.set('quota_tol', String(
+        boundedNumberValue(opts.quota_tol === undefined ? state.params.quota_tol : opts.quota_tol, DEFAULTS.quota_tol, 0, 0.49, false)
+      ));
+    } else {
+      ['algorithm', 'stop_rule', 'min_items', 'max_items', 'target_se', 'stop_pser', 'quota_tol']
+        .forEach(name => u.searchParams.delete(name));
     }
     if (keepResearch) {
       u.searchParams.set('research', '1');
@@ -657,11 +879,15 @@
     return u.toString();
   }
 
-  function updateURLFromProtocol (keepResearch) {
-    const nextUrl = buildProtocolURL(keepResearch);
+  function updateURLFromProtocol (keepResearch, overrides) {
+    const nextUrl = buildProtocolURL(keepResearch, overrides);
     const u = new URL(nextUrl);
-    window.history.replaceState(null, '', u.toString());
-    state.session.url_params_raw = u.search || '';
+    if (u.pathname !== window.location.pathname) {
+      window.location.href = u.toString();
+    } else {
+      window.history.replaceState(null, '', u.toString());
+      state.session.url_params_raw = u.search || '';
+    }
   }
 
   function participantProtocolURL () {
@@ -944,9 +1170,7 @@
         algorithm: state.algorithm,
         quotaTol: state.params.quota_tol,
         disallowWordOverlap: true,
-        maxConditionRun: APP_CONFIG.presentation && APP_CONFIG.presentation.maxConditionRun
-          ? APP_CONFIG.presentation.maxConditionRun
-          : 2,
+        maxConditionRun: maxConditionRun(),
         randomizeConditionTies: true,
         minItems: state.params.min_items,
         minHit: Math.floor(state.params.min_items / 2),
@@ -977,9 +1201,7 @@
       const cr = rows.filter(it => it.condition === 'CR')
         .sort((a, b) => a.rank - b.rank);
       const out = [];
-      const maxRun = APP_CONFIG.presentation && APP_CONFIG.presentation.maxConditionRun
-        ? APP_CONFIG.presentation.maxConditionRun
-        : 2;
+      const maxRun = maxConditionRun();
       const schedule = buildBalancedConditionSchedule(hit.length, cr.length, maxRun);
       state.fixedConditionSchedule = schedule.slice();
       let ih = 0;
@@ -999,9 +1221,7 @@
       .slice().sort((a, b) => b.a - a.a).slice(0, n)
       .map(it => Object.assign({ item_id: mkItemId(it) }, it));
     const out = [];
-    const maxRun = APP_CONFIG.presentation && APP_CONFIG.presentation.maxConditionRun
-      ? APP_CONFIG.presentation.maxConditionRun
-      : 2;
+    const maxRun = maxConditionRun();
     const schedule = buildBalancedConditionSchedule(topHit.length, topCR.length, maxRun);
     state.fixedConditionSchedule = schedule.slice();
     let ih = 0;
@@ -1156,14 +1376,51 @@
   }
 
   function bindResearchPanelControls () {
+    const deliveryEl = $('research-delivery-mode');
     const timingEl = $('research-timing-mode');
     const presetEl = $('research-window-preset');
     const customEl = $('research-window-custom');
+    const keymapEl = $('research-keymap');
+    const autoPlayEl = $('research-auto-play-audio');
+    const fixationEl = $('research-fixation-ms');
+    const postResponseEl = $('research-post-response-ms');
+    const maxRunEl = $('research-max-condition-run');
+    const maxFailsEl = $('research-max-play-fails');
+    const algorithmEl = $('research-algorithm');
+    const stopRuleEl = $('research-stop-rule');
+    const minItemsEl = $('research-min-items');
+    const maxItemsEl = $('research-max-items');
+    const targetSeEl = $('research-target-se');
+    const stopPserEl = $('research-stop-pser');
+    const quotaTolEl = $('research-quota-tol');
     const applyEl = $('research-apply-protocol');
     const copyEl = $('research-copy-url');
     const urlEl = $('research-participant-url');
     const helpEl = $('research-timing-help');
     if (!timingEl || !presetEl || !customEl || !urlEl) return;
+
+    const readOverrides = () => {
+      const delivery = normalizeDelivery(deliveryEl ? deliveryEl.value : state.delivery);
+      const targetAdaptive = delivery === 'adaptive';
+      return {
+        delivery: delivery,
+        timing: timingEl.value,
+        response_window_ms: presetEl.value === 'custom' ? customEl.value : presetEl.value,
+        keymap: keymapEl ? keymapEl.value : state.params.keymap,
+        auto_play_audio: autoPlayEl ? autoPlayEl.value === '1' : autoPlayAudio(),
+        fixation_ms: fixationEl ? fixationEl.value : fixationMs(),
+        post_response_ms: postResponseEl ? postResponseEl.value : postResponseMs(),
+        max_condition_run: maxRunEl ? maxRunEl.value : maxConditionRun(),
+        max_play_fails: maxFailsEl ? maxFailsEl.value : state.params.max_play_fails,
+        algorithm: algorithmEl ? algorithmEl.value : 'blueprint',
+        stop_rule: stopRuleEl ? stopRuleEl.value : 'blueprint_pser',
+        min_items: minItemsEl ? minItemsEl.value : (targetAdaptive ? 40 : state.params.min_items),
+        max_items: maxItemsEl ? maxItemsEl.value : (targetAdaptive ? 70 : state.params.max_items),
+        target_se: targetSeEl ? targetSeEl.value : DEFAULTS.target_se,
+        stop_pser: stopPserEl ? stopPserEl.value : DEFAULTS.stop_pser,
+        quota_tol: quotaTolEl ? quotaTolEl.value : DEFAULTS.quota_tol
+      };
+    };
 
     const refreshControls = () => {
       const timed = normalizeTiming(timingEl.value) === 'timed';
@@ -1172,35 +1429,86 @@
       customEl.disabled = !timed || !custom;
       customEl.parentElement.classList.toggle('hidden', !timed || !custom);
       helpEl.textContent = timed ? t('researchTimedHelp') : t('researchUntimedHelp');
-      urlEl.value = buildProtocolURL(
-        false,
-        timingEl.value,
-        presetEl.value === 'custom' ? customEl.value : presetEl.value
-      );
+      urlEl.value = buildProtocolURL(false, readOverrides());
     };
 
+    if (deliveryEl) deliveryEl.addEventListener('change', refreshControls);
     timingEl.addEventListener('change', refreshControls);
     presetEl.addEventListener('change', refreshControls);
     customEl.addEventListener('input', refreshControls);
+    [
+      keymapEl, autoPlayEl, fixationEl, postResponseEl, maxRunEl, maxFailsEl,
+      algorithmEl, stopRuleEl, minItemsEl, maxItemsEl, targetSeEl, stopPserEl, quotaTolEl
+    ].forEach(el => {
+      if (!el) return;
+      el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', refreshControls);
+    });
 
     if (applyEl) {
       applyEl.addEventListener('click', () => {
-        state.params.timing = normalizeTiming(timingEl.value);
+        const overrides = readOverrides();
+        if (normalizeDelivery(overrides.delivery) !== state.delivery) {
+          logEvent('research_protocol_mode_switch', {
+            from_delivery: state.delivery,
+            to_delivery: overrides.delivery,
+            participant_url: buildProtocolURL(false, overrides)
+          });
+          updateURLFromProtocol(true, overrides);
+          return;
+        }
+        state.params.timing = normalizeTiming(overrides.timing);
         if (state.params.timing === 'timed') {
-          const raw = presetEl.value === 'custom' ? customEl.value : presetEl.value;
           state.params.response_window_ms = boundedNumberValue(
-            raw,
+            overrides.response_window_ms,
             DEFAULTS.response_window_ms,
             250,
             10000,
             true
           );
         }
-        updateURLFromProtocol(true);
+        state.params.keymap = normalizeKeymap(overrides.keymap);
+        state.params.auto_play_audio = !!overrides.auto_play_audio;
+        state.params.fixation_ms = boundedNumberValue(
+          overrides.fixation_ms, DEFAULTS.fixation_ms, 0, 3000, true);
+        state.params.post_response_ms = boundedNumberValue(
+          overrides.post_response_ms, DEFAULTS.post_response_ms, 0, 5000, true);
+        state.params.max_condition_run = boundedNumberValue(
+          overrides.max_condition_run, DEFAULTS.max_condition_run, 1, 10, true);
+        state.params.max_play_fails = boundedNumberValue(
+          overrides.max_play_fails, DEFAULTS.max_play_fails, 0, 10, true);
+        if (state.delivery === 'adaptive') {
+          const adaptiveBounds = adaptiveItemBounds();
+          const defaultMinItems = Math.min(
+            Math.max(DEFAULTS.min_items, adaptiveBounds.floor),
+            adaptiveBounds.cap
+          );
+          state.algorithm = normalizeAlgorithm(overrides.algorithm);
+          state.stopRule = normalizeStopRule(overrides.stop_rule);
+          state.params.min_items = boundedNumberValue(
+            overrides.min_items, defaultMinItems, adaptiveBounds.floor, adaptiveBounds.cap, true);
+          state.params.max_items = boundedNumberValue(
+            overrides.max_items, adaptiveBounds.cap, adaptiveBounds.floor, adaptiveBounds.cap, true);
+          if (state.params.max_items < state.params.min_items) {
+            state.params.max_items = state.params.min_items;
+          }
+          state.params.target_se = boundedNumberValue(overrides.target_se, DEFAULTS.target_se, 0.05, 2.0, false);
+          state.params.stop_pser = boundedNumberValue(overrides.stop_pser, DEFAULTS.stop_pser, 0, 1, false);
+          state.params.quota_tol = boundedNumberValue(overrides.quota_tol, DEFAULTS.quota_tol, 0, 0.49, false);
+        }
+        updateURLFromProtocol(true, overrides);
+        applyLanguage();
         updateTimingInstruction();
+        updatePresentationInstruction();
         logEvent('research_protocol_applied', {
+          delivery: state.delivery,
           timing_mode: state.params.timing,
           response_window_ms: responseWindowMs(),
+          auto_play_audio: autoPlayAudio(),
+          fixation_ms: fixationMs(),
+          post_response_ms: postResponseMs(),
+          max_condition_run: maxConditionRun(),
+          max_play_fails: state.params.max_play_fails,
+          keymap: state.params.keymap,
           participant_url: participantProtocolURL()
         });
         renderResearchPanel();
@@ -1283,11 +1591,58 @@
       : t('researchFixedNote');
     const preset = responseWindowPreset();
     const currentWindow = responseWindowMs() || DEFAULTS.response_window_ms;
+    const keymap = normalizeKeymap(state.params.keymap);
+    const adaptiveBounds = adaptiveItemBounds();
+    const adaptiveProtocolHtml = state.delivery === 'adaptive'
+      ? '<div class="research-protocol-subsection">' +
+          '<h5>' + escapeHtml(t('researchAdaptiveSettingsTitle')) + '</h5>' +
+          '<div class="research-control-grid">' +
+            '<label><span>' + escapeHtml(t('researchAlgorithmLabel')) + '</span>' +
+              '<select id="research-algorithm">' +
+                ['blueprint', 'alternating', 'quota'].map(value =>
+                  '<option value="' + value + '"' + (state.algorithm === value ? ' selected' : '') +
+                    '>' + value + '</option>'
+                ).join('') +
+              '</select></label>' +
+            '<label><span>' + escapeHtml(t('researchStopRuleLabel')) + '</span>' +
+              '<select id="research-stop-rule">' +
+                ['blueprint_pser', 'pser', 'se', 'max_items'].map(value =>
+                  '<option value="' + value + '"' + (state.stopRule === value ? ' selected' : '') +
+                    '>' + value + '</option>'
+                ).join('') +
+              '</select></label>' +
+            '<label><span>' + escapeHtml(t('researchMinItemsLabel')) + '</span>' +
+              '<input type="number" id="research-min-items" min="' + adaptiveBounds.floor +
+                '" max="' + adaptiveBounds.cap + '" step="1" value="' +
+                escapeHtml(state.params.min_items) + '" /></label>' +
+            '<label><span>' + escapeHtml(t('researchMaxItemsLabel')) + '</span>' +
+              '<input type="number" id="research-max-items" min="' + adaptiveBounds.floor +
+                '" max="' + adaptiveBounds.cap + '" step="1" value="' +
+                escapeHtml(state.params.max_items) + '" /></label>' +
+            '<label><span>' + escapeHtml(t('researchTargetSeLabel')) + '</span>' +
+              '<input type="number" id="research-target-se" min="0.05" max="2" step="0.01" value="' +
+                escapeHtml(state.params.target_se) + '" /></label>' +
+            '<label><span>' + escapeHtml(t('researchStopPserLabel')) + '</span>' +
+              '<input type="number" id="research-stop-pser" min="0" max="1" step="0.001" value="' +
+                escapeHtml(state.params.stop_pser) + '" /></label>' +
+            '<label><span>' + escapeHtml(t('researchQuotaTolLabel')) + '</span>' +
+              '<input type="number" id="research-quota-tol" min="0" max="0.49" step="0.01" value="' +
+                escapeHtml(state.params.quota_tol) + '" /></label>' +
+          '</div>' +
+        '</div>'
+      : '';
     const protocolHtml =
       '<div class="research-protocol">' +
         '<h4>' + escapeHtml(t('researchProtocolTitle')) + '</h4>' +
         '<p class="research-model">' + escapeHtml(t('researchProtocolNote')) + '</p>' +
         '<div class="research-control-grid">' +
+          '<label><span>' + escapeHtml(t('researchDeliveryModeLabel')) + '</span>' +
+            '<select id="research-delivery-mode">' +
+              '<option value="fixed40"' + (state.delivery === 'fixed40' ? ' selected' : '') + '>' +
+                escapeHtml(t('researchFixed40Option')) + '</option>' +
+              '<option value="adaptive"' + (state.delivery === 'adaptive' ? ' selected' : '') + '>' +
+                escapeHtml(t('researchAdaptiveOption')) + '</option>' +
+            '</select></label>' +
           '<label><span>' + escapeHtml(t('researchTimingModeLabel')) + '</span>' +
             '<select id="research-timing-mode">' +
               '<option value="timed"' + (isTimed() ? ' selected' : '') + '>' +
@@ -1307,7 +1662,36 @@
           '<label><span>' + escapeHtml(t('researchWindowCustomLabel')) + '</span>' +
             '<input type="number" id="research-window-custom" min="250" max="10000" step="50" value="' +
               escapeHtml(currentWindow) + '" /></label>' +
+          '<label><span>' + escapeHtml(t('researchAudioAutoplayLabel')) + '</span>' +
+            '<select id="research-auto-play-audio">' +
+              '<option value="1"' + (autoPlayAudio() ? ' selected' : '') + '>' +
+                escapeHtml(t('researchAutoplayOn')) + '</option>' +
+              '<option value="0"' + (!autoPlayAudio() ? ' selected' : '') + '>' +
+                escapeHtml(t('researchAutoplayOff')) + '</option>' +
+            '</select></label>' +
+          '<label><span>' + escapeHtml(t('researchFixationMsLabel')) + '</span>' +
+            '<input type="number" id="research-fixation-ms" min="0" max="3000" step="50" value="' +
+              escapeHtml(fixationMs()) + '" /></label>' +
+          '<label><span>' + escapeHtml(t('researchPostResponseMsLabel')) + '</span>' +
+            '<input type="number" id="research-post-response-ms" min="0" max="5000" step="50" value="' +
+              escapeHtml(postResponseMs()) + '" /></label>' +
+          '<label><span>' + escapeHtml(t('researchMaxConditionRunLabel')) + '</span>' +
+            '<input type="number" id="research-max-condition-run" min="1" max="10" step="1" value="' +
+              escapeHtml(maxConditionRun()) + '" /></label>' +
+          '<label><span>' + escapeHtml(t('researchMaxPlayFailsLabel')) + '</span>' +
+            '<input type="number" id="research-max-play-fails" min="0" max="10" step="1" value="' +
+              escapeHtml(state.params.max_play_fails) + '" /></label>' +
+          '<label><span>' + escapeHtml(t('researchKeymapLabel')) + '</span>' +
+            '<select id="research-keymap">' +
+              '<option value="counterbalanced"' + (keymap === 'counterbalanced' ? ' selected' : '') + '>' +
+                escapeHtml(t('researchKeymapCounterbalanced')) + '</option>' +
+              '<option value="f_appropriate"' + (keymap === 'f_appropriate' ? ' selected' : '') + '>' +
+                escapeHtml(t('researchKeymapFAppropriate')) + '</option>' +
+              '<option value="j_appropriate"' + (keymap === 'j_appropriate' ? ' selected' : '') + '>' +
+                escapeHtml(t('researchKeymapJAppropriate')) + '</option>' +
+            '</select></label>' +
         '</div>' +
+        adaptiveProtocolHtml +
         '<p id="research-timing-help" class="research-model"></p>' +
         '<div class="research-url-row">' +
           '<label><span>' + escapeHtml(t('researchParticipantUrlLabel')) + '</span>' +
@@ -1389,13 +1773,17 @@
         '<div><span>' + escapeHtml(t('researchTiming')) + '</span><strong>' +
           escapeHtml(timing) + '</strong></div>' +
         '<div><span>' + escapeHtml(t('researchAutoplay')) + '</span><strong>' +
-          escapeHtml(String(!!presentationOption('autoPlayAudio', true))) + '</strong></div>' +
+          escapeHtml(autoPlayAudio() ? t('researchAutoplayOn') : t('researchAutoplayOff')) + '</strong></div>' +
         '<div><span>' + escapeHtml(t('researchFixation')) + '</span><strong>' +
-          escapeHtml(Number(presentationOption('fixationMs', 500)) + ' ms') + '</strong></div>' +
+          escapeHtml(fixationMs() + ' ms') + '</strong></div>' +
+        '<div><span>' + escapeHtml(t('researchPostResponseMsLabel')) + '</span><strong>' +
+          escapeHtml(postResponseMs() + ' ms') + '</strong></div>' +
         '<div><span>' + escapeHtml(t('researchMaxRun')) + '</span><strong>' +
-          escapeHtml(APP_CONFIG.presentation && APP_CONFIG.presentation.maxConditionRun
-            ? APP_CONFIG.presentation.maxConditionRun
-            : 2) + '</strong></div>' +
+          escapeHtml(maxConditionRun()) + '</strong></div>' +
+        '<div><span>' + escapeHtml(t('researchMaxPlayFailsLabel')) + '</span><strong>' +
+          escapeHtml(state.params.max_play_fails) + '</strong></div>' +
+        '<div><span>' + escapeHtml(t('researchKeymapLabel')) + '</span><strong>' +
+          escapeHtml(normalizeKeymap(state.params.keymap)) + '</strong></div>' +
         '<div><span>' + escapeHtml(t('researchForm')) + '</span><strong>' +
           escapeHtml(form ? form.form_id : '') + '</strong></div>' +
       '</div>' +
@@ -1468,8 +1856,8 @@
     const area = $('target-word-area');
     const fixation = $('fixation-cross');
     const btnPlay = $('btn-play');
-    const autoPlay = !!presentationOption('autoPlayAudio', true);
-    const fixationMs = Number(presentationOption('fixationMs', 500));
+    const autoPlay = autoPlayAudio();
+    const fixationDurationMs = fixationMs();
 
     cleanupResponseInput();
     updateResponseLabels();
@@ -1574,9 +1962,9 @@
       setStatus(t('lookAtFixation'));
       logEvent('fixation_onset', {
         targetword: targetword,
-        fixation_ms: fixationMs
+        fixation_ms: fixationDurationMs
       });
-      await sleep(fixationMs);
+      await sleep(fixationDurationMs);
       if (committed) return;
       if (fixation) fixation.classList.add('hidden');
       logEvent('fixation_offset', { targetword: targetword });
@@ -1908,7 +2296,7 @@
       timed_out: timedOut
     });
     cleanupResponseInput();
-    setTimeout(nextItem, Number(presentationOption('postResponseMs', 350)));
+    setTimeout(nextItem, postResponseMs());
   }
 
   // ---- Finalization ----
@@ -2115,12 +2503,10 @@
         upper_bound_ms: 10000
       },
       presentation: {
-        auto_play_audio: !!presentationOption('autoPlayAudio', true),
-        fixation_ms: Number(presentationOption('fixationMs', 500)),
-        post_response_ms: Number(presentationOption('postResponseMs', 350)),
-        max_condition_run: APP_CONFIG.presentation && APP_CONFIG.presentation.maxConditionRun
-          ? APP_CONFIG.presentation.maxConditionRun
-          : 2,
+        auto_play_audio: autoPlayAudio(),
+        fixation_ms: fixationMs(),
+        post_response_ms: postResponseMs(),
+        max_condition_run: maxConditionRun(),
         keymap_policy: state.params.keymap || 'counterbalanced',
         response_keymap_id: state.responseMapping ? state.responseMapping.keymap_id : ''
       },
@@ -2392,12 +2778,10 @@
       : state.delivery === 'adaptive'
       ? 'blueprint_random_tie_condition_order'
       : 'model_selected_condition_order';
-    state.session.max_condition_run = APP_CONFIG.presentation && APP_CONFIG.presentation.maxConditionRun
-      ? APP_CONFIG.presentation.maxConditionRun
-      : 2;
-    state.session.auto_play_audio = !!presentationOption('autoPlayAudio', true);
-    state.session.fixation_ms = Number(presentationOption('fixationMs', 500));
-    state.session.post_response_ms = Number(presentationOption('postResponseMs', 350));
+    state.session.max_condition_run = maxConditionRun();
+    state.session.auto_play_audio = autoPlayAudio();
+    state.session.fixation_ms = fixationMs();
+    state.session.post_response_ms = postResponseMs();
     state.session.timing_mode = state.params.timing;
     state.session.response_window_ms = responseWindowMs();
     state.session.response_keymap_id = state.responseMapping ? state.responseMapping.keymap_id : '';

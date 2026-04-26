@@ -54,7 +54,7 @@ Chrome / PC 前提の静的 HTML + vanilla JavaScript で動作する
 - UI 表示言語は日本語 / 英語を選択可能。URL では `?lang=ja` / `?lang=en`
 - 研究用確認パネルは `?research=1` のときだけ表示
   - 提示語 / 候補語、Timed の制限時間、項目弁別力 `a`、困難度 `b` を確認可能
-  - Timed / Untimed と反応時間枠を研究者が設定し、参加者用URLへ反映可能
+  - 実施モード、Timed / Untimed、反応時間枠、音声自動再生、注視点、回答後待機時間、同一条件の最大連続数、キー割当などを研究者が設定し、参加者用URLへ反映可能
 - `F` / `J` の適切・不適切割り当ては参加者ごとにカウンターバランス
 - 応答時間、応答キー、応答モダリティ、時間切れ、音声終了時刻、項目パラメータ、running θ / SE を記録
 - Excel 自動ダウンロード
@@ -137,11 +137,17 @@ https://ryuya-dot-com.github.io/LJT_CAT/
 | `keymap` | `counterbalanced`, `f_appropriate`, `j_appropriate`。通常は `counterbalanced` |
 | `timing` | `timed`, `untimed`。通常は `timed` |
 | `response_window_ms` | Timed の反応時間枠。デフォルトは 1250 ms |
+| `auto_play_audio` | `1` / `0`。音声を自動再生するか |
+| `fixation_ms` | 注視点 `+` の提示時間。デフォルトは 500 ms |
+| `post_response_ms` | 回答後、次項目へ進むまでの待機時間。デフォルトは 350 ms |
+| `max_condition_run` | Hit または CR の最大連続提示数。デフォルトは 2 |
 | `lang` | `ja`, `en`。UI 表示言語 |
 | `research` | `1` のとき研究用確認パネルを表示 |
 
 `?research=1` で開くと、研究者用パネルから `timing` と
-`response_window_ms` を変更し、参加者配布用URLを生成できます。
+`response_window_ms` に加え、実施モード、音声自動再生、注視点、
+回答後待機時間、同一条件の最大連続数、キー割当などを変更し、
+参加者配布用URLを生成できます。
 参加者画面ではこの設定は変更できず、実施条件は Excel の
 `protocol_manifest` と `metadata` に保存されます。
 
@@ -237,7 +243,7 @@ LJT_CAT_{delivery_or_algorithm}_{name}_{id}_{YYYY-MM-DD_HH-MM-SS}.xlsx
 | `cat_trace` | CAT / 固定フォームの項目提示順、running θ / SE、項目情報量 |
 | `quality_flags` | 報告可否、条件別回答数、タイムアウト率、マウス回答率、フォーカス離脱などの品質フラグ |
 | `events` | ステージ遷移、音声再生、target onset、応答などのイベントログ |
-| `protocol_manifest` | 参加者用URL、Timed/Untimed、反応時間枠、提示手順、選択フォームなどの実施プロトコル |
+| `protocol_manifest` | 参加者用URL、Timed/Untimed、反応時間枠、音声自動再生、注視点、回答後待機時間、最大連続数、選択フォームなどの実施プロトコル |
 | `metadata` | URL設定、停止則、アルゴリズム、提示手順、Timed/Untimed、キー割り当て、回帰式、scoring backbone |
 
 ブラウザの Excel 保存に失敗した場合は、同じ payload を JSON として保存します。
