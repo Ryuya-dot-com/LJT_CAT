@@ -5,7 +5,7 @@
   <title>語彙意味判断テスト (制約付きCAT)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="../assets/styles.css?v=20260426d" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260428d" />
 </head>
 <body>
   <div id="browser-warning" class="hidden">
@@ -29,7 +29,7 @@
           <li data-i18n-html="noteAutoplay">各問題では、中央の「+」のあと音声が<strong>自動で1回</strong>再生されます。</li>
           <li data-i18n-html="notePractice">練習が<strong>4問</strong>あり、そのあと本試行に進みます。</li>
           <li data-i18n="noteAdaptiveLength">本試行の問題数は回答状況に応じて変わります。</li>
-          <li data-i18n-html="noteKeys">音声終了後、表示された単語に対してキーボードの <strong>F</strong> / <strong>J</strong> で回答します。</li>
+          <li data-i18n-html="noteKeys">音声終了後、キーボードの <strong>F</strong> / <strong>J</strong> で回答します。</li>
           <li data-i18n="noteHeadphones">ヘッドホン / イヤホンの使用を強く推奨します。</li>
         </ul>
         <div id="research-panel" class="research-panel hidden"></div>
@@ -61,9 +61,19 @@
       <section id="stage-instructions" class="stage hidden">
         <h2 data-i18n="instructionsTitle">教示</h2>
         <p data-i18n="instructionsLead">これから4問の練習を行います。各問題では:</p>
+        <div class="instruction-callout">
+          <h3 data-i18n="practiceGoalTitle">練習で確認すること</h3>
+          <ul>
+            <li data-i18n-html="practiceGoalAudio">音声がはっきり聞こえる音量になっているか確認してください。</li>
+            <li data-i18n-html="practiceGoalDecision">文全体を聞き、文の中で聞こえた英単語の意味が自然かどうかを判断してください。</li>
+            <li data-i18n-html="practiceGoalKeys">あなたの <strong>F</strong> / <strong>J</strong> キー割り当てを確認してください。</li>
+          </ul>
+        </div>
         <ol>
           <li data-i18n-html="instructionFixation">中央の <strong>+</strong> を見てください。音声は自動で再生されます。</li>
-          <li data-i18n-html="instructionDecision">音声が終わったら、表示される英単語の使い方が
+          <li data-i18n-html="instructionNoSpelling">判断する英単語のスペルは画面に表示されません。音声で聞こえた単語をもとに判断してください。</li>
+          <li data-i18n-html="instructionCriteria"><strong>適切</strong>は、聞こえた英単語が文脈に合っている場合です。<strong>不適切</strong>は、聞こえた英単語が文脈に合わない場合です。</li>
+          <li data-i18n-html="instructionDecision">音声が終わったら、聞こえた英単語の使い方が
               <span class="yes-color"><strong>「適切」</strong></span>か
               <span class="no-color"><strong>「不適切」</strong></span>かを選んでください。</li>
           <li id="key-instruction">回答キーを読み込み中です。</li>
@@ -71,6 +81,7 @@
           <li data-i18n="instructionFeedback">練習では正解・不正解のフィードバックが表示されます。
               本試行ではフィードバックはありません。</li>
         </ol>
+        <p class="instruction-note" data-i18n="instructionPracticeSupport">練習中に音声が聞き取りにくい場合は、本試行に進む前に研究者へ知らせてください。</p>
         <button id="btn-start-practice" class="primary-btn" data-i18n="startPractice">練習を開始する</button>
       </section>
 
@@ -102,8 +113,10 @@
 
       <section id="stage-transition" class="stage hidden">
         <h2 data-i18n="transitionTitle">練習は以上です</h2>
+        <div id="practice-summary" class="practice-summary" role="status" aria-live="polite"></div>
         <p data-i18n-html="transitionBody">これから本試行に入ります。本試行では<strong>フィードバックは表示されません</strong>。
            音声は<strong>1回のみ</strong>再生されます。準備ができたら開始してください。</p>
+        <p class="instruction-note" data-i18n="transitionReminder">音量、キー割り当て、判断方法に問題がなければ本試行を開始してください。</p>
         <button id="btn-start-main" class="primary-btn" data-i18n="startMain">本試行を開始する</button>
       </section>
 
@@ -113,6 +126,7 @@
         <div class="download-status" id="download-status" role="status" aria-live="polite" data-i18n="savingStatus">
           結果を保存中...
         </div>
+        <p class="result-file" id="filename-display"></p>
         <button id="btn-download-again" class="secondary-btn hidden" data-i18n="downloadAgain">
           もう一度ダウンロードする
         </button>
@@ -128,11 +142,11 @@
     </footer>
   </div>
 
-  <script src="../lib/xlsx.full.min.js?v=20260426d"></script>
-  <script src="config.js?v=20260426d"></script>
-  <script src="../js/cat_1f.js?v=20260426d"></script>
-  <script src="../js/cat_2f.js?v=20260426d"></script>
-  <script src="../js/xlsx_export.js?v=20260426d"></script>
-  <script src="../js/cat_app.js?v=20260426d"></script>
+  <script src="../lib/xlsx.full.min.js?v=20260428d"></script>
+  <script src="config.js?v=20260428d"></script>
+  <script src="../js/cat_1f.js?v=20260428d"></script>
+  <script src="../js/cat_2f.js?v=20260428d"></script>
+  <script src="../js/xlsx_export.js?v=20260428d"></script>
+  <script src="../js/cat_app.js?v=20260428d"></script>
 </body>
 </html>

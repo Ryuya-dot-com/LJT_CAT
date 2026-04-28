@@ -36,6 +36,16 @@
     const wb = XLSX.utils.book_new();
     const reg = payload.session.reg || {};
     const reg2f = payload.session.reg_2f || {};
+    const practiceSummary = payload.practice.summary || {};
+    const thetaGapFlag = payload.final.response_pattern_theta_gap_flag !== undefined
+      ? payload.final.response_pattern_theta_gap_flag
+      : payload.final.aberrance_theta_gap_flag;
+    const yesPatternFlag = payload.final.uniform_yes_flag !== undefined
+      ? payload.final.uniform_yes_flag
+      : payload.final.all_yes_flag;
+    const noPatternFlag = payload.final.uniform_no_flag !== undefined
+      ? payload.final.uniform_no_flag
+      : payload.final.all_no_flag;
 
     // --- Sheet 1: summary (one row) ---
     const summary = [{
@@ -55,8 +65,15 @@
       scoring_status:       payload.final.scoring_status,
       valid_for_reporting:  payload.final.valid_for_reporting,
       stop_reason:          payload.final.stop_reason,
+      result_filename:      payload.session.result_filename || filename,
+      instruction_version:  payload.session.instruction_version || payload.practice.instruction_version || '',
       practice_completed:   payload.practice.completed,
       practice_n_correct:   payload.practice.n_correct,
+      practice_n_total:     practiceSummary.n_total,
+      practice_n_answered:  practiceSummary.n_answered,
+      practice_accuracy:    practiceSummary.accuracy,
+      practice_n_timed_out: practiceSummary.n_timed_out,
+      practice_n_audio_failed: practiceSummary.n_audio_failed,
       n_items:              payload.final.n_items,
       n_answered_items:     payload.final.n_answered_items,
       n_skipped_items:      payload.final.n_skipped_items,
@@ -70,9 +87,12 @@
       n_cr_skipped:         payload.final.n_cr_skipped,
       targetword_overlap_count: payload.final.targetword_overlap_count,
       theta_gap:            payload.final.theta_gap,
-      aberrance_theta_gap_flag: payload.final.aberrance_theta_gap_flag,
-      all_yes_flag:         payload.final.all_yes_flag,
-      all_no_flag:          payload.final.all_no_flag,
+      response_pattern_theta_gap_flag: thetaGapFlag,
+      aberrance_theta_gap_flag: thetaGapFlag,
+      uniform_yes_flag:     yesPatternFlag,
+      uniform_no_flag:      noPatternFlag,
+      all_yes_flag:         yesPatternFlag,
+      all_no_flag:          noPatternFlag,
       yes_response_rate:    payload.final.yes_response_rate,
       median_rt_ms:         payload.final.median_rt_ms,
       median_rt_hit_ms:     payload.final.median_rt_hit_ms,
@@ -146,6 +166,8 @@
       { key: 'filename',            value: filename },
       { key: 'app_version',         value: payload.session.app_version },
       { key: 'calibration_version', value: payload.session.calibration_version },
+      { key: 'instruction_version', value: payload.session.instruction_version || payload.practice.instruction_version || '' },
+      { key: 'practice_summary',    value: JSON.stringify(practiceSummary) },
       { key: 'mode',                value: payload.session.mode },
       { key: 'delivery',            value: payload.session.delivery || payload.session.mode },
       { key: 'algorithm',           value: payload.session.algorithm || '' },

@@ -202,25 +202,24 @@
    * Production mixed-condition CAT.
    *
    * The two LJT conditions are scored on their own per-condition 1D 2PL
-   * scales. Selection therefore keeps separate Hit and CR posteriors, forces
-   * a validated Hit/CR blueprint, and prevents target-word reuse across
-   * conditions. Within the currently eligible condition, the next item is the
-   * unused item with maximum Fisher information at that condition's current
-   * posterior mean.
+   * scales. Selection therefore keeps separate Hit and CR posteriors and uses
+   * a Hit/CR blueprint over the available item bank. Within the currently
+   * eligible condition, the next item is the unused item with maximum Fisher
+   * information at that condition's current posterior mean.
    */
   function createTwoConditionSession (hitItems, crItems, options) {
     const opts = Object.assign({
       algorithm: 'blueprint',       // blueprint | alternating | quota
       quotaTol: 0.20,
-      disallowWordOverlap: true,
+      disallowWordOverlap: false,
       maxConditionRun: 2,
       randomizeConditionTies: true,
-      minItems: 40,
-      minHit: 20,
-      minCR: 20,
-      maxItems: 70,
-      maxHit: 35,
-      maxCR: 35
+      minItems: 0,
+      minHit: 0,
+      minCR: 0,
+      maxItems: 160,
+      maxHit: 80,
+      maxCR: 80
     }, options || {});
 
     const grid = buildGrid();

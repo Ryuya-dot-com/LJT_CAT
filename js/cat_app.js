@@ -4,7 +4,7 @@
  * URL parameters are controlled by fixed40/config.js or adaptive/config.js.
  *                 ?lab=<labcode>
  *                 adaptive/: ?algorithm=blueprint|alternating|quota &stop_rule=blueprint_pser|pser|se|max_items
- *                 adaptive/: ?target_se=0.30 &min_items=40 &max_items=70
+ *                 adaptive/: ?target_se=0.30 &min_items=0 &max_items=160
  *                 ?max_play_fails=3 (audio failure skip threshold)
  *                 ?keymap=counterbalanced|f_appropriate|j_appropriate
  *                 ?timing=timed|untimed &response_window_ms=1250
@@ -13,8 +13,8 @@
  *                 ?research=1 (show calibration / item-bank audit panel)
  *
  * Scoring (v2.1): fixed40 delivery uses the validated disjoint 20+20 form.
- * Adaptive delivery uses a target-word-disjoint blueprint CAT based on the
- * per-condition 1D 2PL banks (mod_hit / mod_cr). Final θ is computed
+ * Adaptive delivery uses the full 160-item bank with a blueprint CAT based on
+ * the per-condition 1D 2PL banks (mod_hit / mod_cr). Final θ is computed
  * separately from those same per-condition banks; the combined 1F model is
  * retained only as a legacy calibration artifact.
  */
@@ -22,7 +22,8 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '2.5.0';
+  const APP_VERSION = '2.7.0';
+  const UX_INSTRUCTION_VERSION = 'practice_instructions_20260428';
   const APP_CONFIG = Object.assign({
     delivery: 'landing',
     assetBase: '.',
@@ -33,8 +34,8 @@
 
   const DEFAULTS = Object.assign({
     target_se: 0.30,
-    min_items: 40,
-    max_items: 70,
+    min_items: 0,
+    max_items: 160,
     max_play_fails: 3,
     stop_pser: 0.01,
     quota_tol: 0.20,
@@ -62,7 +63,7 @@
       notePractice: '練習が<strong>4問</strong>あり、そのあと本試行に進みます。',
       noteFixedLength: '本試行は<strong>40問</strong>です。',
       noteAdaptiveLength: '本試行の問題数は回答状況に応じて変わります。',
-      noteKeys: '音声終了後、表示された単語に対してキーボードの <strong>F</strong> / <strong>J</strong> で回答します。',
+      noteKeys: '音声終了後、キーボードの <strong>F</strong> / <strong>J</strong> で回答します。',
       noteHeadphones: 'ヘッドホン / イヤホンの使用を強く推奨します。',
       participantInfo: '参加者情報',
       languageLabel: '表示言語',
@@ -71,23 +72,35 @@
       consentStart: '同意して開始',
       disclaimer: '回答データは終了時にあなたのコンピュータに保存されます。ダウンロードされたファイルは研究者の指示にしたがって共有してください。',
       instructionsTitle: '教示',
-      instructionsLead: 'これから4問の練習を行います。各問題では:',
+      instructionsLead: 'まず4問の練習を行います。練習では、音量、キー割り当て、判断方法を確認してください。',
+      practiceGoalTitle: '練習で確認すること',
+      practiceGoalAudio: '音声がはっきり聞こえる音量になっているか確認してください。',
+      practiceGoalDecision: '文全体を聞き、文の中で聞こえた英単語の意味が自然かどうかを判断してください。',
+      practiceGoalKeys: 'あなたの <strong>F</strong> / <strong>J</strong> キー割り当てを確認してください。',
       instructionFixation: '中央の <strong>+</strong> を見てください。音声は自動で再生されます。',
       instructionManualPlay: '中央の <strong>+</strong> を見てください。そのあと表示されるボタンで音声を再生してください。',
-      instructionDecision: '音声が終わったら、表示される英単語の使い方が <span class="yes-color"><strong>「適切」</strong></span>か <span class="no-color"><strong>「不適切」</strong></span>かを選んでください。',
+      instructionNoSpelling: '判断する英単語のスペルは画面に表示されません。音声で聞こえた単語をもとに判断してください。',
+      instructionCriteria: '<strong>適切</strong>は、聞こえた英単語が文脈に合っている場合です。<strong>不適切</strong>は、聞こえた英単語が文脈に合わない場合です。',
+      instructionDecision: '音声が終わったら、聞こえた英単語の使い方が <span class="yes-color"><strong>「適切」</strong></span>か <span class="no-color"><strong>「不適切」</strong></span>かを選んでください。',
       instructionFeedback: '練習では正解・不正解のフィードバックが表示されます。本試行ではフィードバックはありません。',
+      instructionPracticeSupport: '練習中に音声が聞き取りにくい場合は、本試行に進む前に研究者へ知らせてください。',
       startPractice: '練習を開始する',
       transitionTitle: '練習は以上です',
       transitionBody: 'これから本試行に入ります。本試行では<strong>フィードバックは表示されません</strong>。音声は<strong>1回のみ</strong>再生されます。準備ができたら開始してください。',
+      transitionReminder: '音量、キー割り当て、判断方法に問題がなければ本試行を開始してください。',
+      practiceSummary: '練習結果: {correct} / {total} 正解',
+      practiceSummaryDetails: '時間切れ {timeouts} 問、音声失敗 {audioFailed} 問',
       startMain: '本試行を開始する',
       resultTitle: 'テスト終了',
       resultThanks: 'ご協力ありがとうございました。',
       downloadAgain: 'もう一度ダウンロードする',
       endNote: '結果ファイルがダウンロードフォルダに保存されました。研究者の指示にしたがって共有してください。',
+      resultFilename: '保存ファイル: {filename}',
       appropriate: '適切',
       inappropriate: '不適切',
       keySuffix: 'キー',
-      keyInstruction: '表示された単語が意味的に適切なら <strong>{yesKey}</strong>、不適切なら <strong>{noKey}</strong> を、できるだけ速く正確に押してください。',
+      keyInstruction: '聞こえた英単語の使い方が意味的に適切なら <strong>{yesKey}</strong>、不適切なら <strong>{noKey}</strong> を、できるだけ速く正確に押してください。',
+      decisionPrompt: '聞こえた英単語の使い方を判断してください。',
       timedInstruction: '音声終了後は、一定時間内に回答してください。時間内に反応がない場合は次の問題に進みます。',
       untimedInstruction: '時間制限はありませんが、できるだけ速く正確に回答してください。',
       keyPromptFallback: 'F / J キーで判断してください。',
@@ -130,7 +143,7 @@
       researchForm: 'フォーム',
       researchItemsTitle: '提示語・項目パラメータ一覧',
       researchFixedNote: '固定40問版で提示される40項目です。実際の順序はセッションごとに制約付きランダム化されます。',
-      researchAdaptiveNote: 'Adaptive版で候補となる70項目です。実際の提示項目と順序は回答に応じてこの候補プールから決まります。',
+      researchAdaptiveNote: 'Adaptive版で候補となる全160項目です。実際の提示項目と順序は回答に応じてこの候補プールから決まります。',
       researchNoItems: '表示できる項目情報がありません。',
       researchColRank: 'rank',
       researchColCondition: 'condition',
@@ -204,7 +217,7 @@
       notePractice: 'There are <strong>4 practice trials</strong>, followed by the main test.',
       noteFixedLength: 'The main test has <strong>40 trials</strong>.',
       noteAdaptiveLength: 'The number of main-test trials depends on your responses.',
-      noteKeys: 'After the audio ends, respond to the displayed word with the <strong>F</strong> / <strong>J</strong> keys.',
+      noteKeys: 'After the audio ends, respond with the <strong>F</strong> / <strong>J</strong> keys.',
       noteHeadphones: 'Headphones or earphones are strongly recommended.',
       participantInfo: 'Participant Information',
       languageLabel: 'Display language',
@@ -213,23 +226,35 @@
       consentStart: 'Agree and start',
       disclaimer: 'At the end of the test, your response data will be saved to this computer. Please share the downloaded file according to the researcher’s instructions.',
       instructionsTitle: 'Instructions',
-      instructionsLead: 'You will now complete 4 practice trials. On each trial:',
+      instructionsLead: 'You will first complete 4 practice trials. Use them to check the audio volume, key mapping, and decision rule.',
+      practiceGoalTitle: 'What to check in practice',
+      practiceGoalAudio: 'Make sure the audio volume is clear and comfortable.',
+      practiceGoalDecision: 'Listen to the whole sentence, then judge whether the word you heard fits the sentence context.',
+      practiceGoalKeys: 'Check your assigned <strong>F</strong> / <strong>J</strong> key mapping.',
       instructionFixation: 'Look at the central <strong>+</strong>. The audio will play automatically.',
       instructionManualPlay: 'Look at the central <strong>+</strong>. Then press the displayed button to play the audio.',
-      instructionDecision: 'After the audio ends, decide whether the displayed English word was used <span class="yes-color"><strong>appropriately</strong></span> or <span class="no-color"><strong>inappropriately</strong></span>.',
+      instructionNoSpelling: 'The spelling of the word to judge is not shown on screen. Base your decision on the word you heard.',
+      instructionCriteria: '<strong>Appropriate</strong> means the word you heard fits the sentence context. <strong>Inappropriate</strong> means it does not fit the sentence context.',
+      instructionDecision: 'After the audio ends, decide whether the English word you heard was used <span class="yes-color"><strong>appropriately</strong></span> or <span class="no-color"><strong>inappropriately</strong></span>.',
       instructionFeedback: 'Practice trials show correct/incorrect feedback. Main-test trials do not show feedback.',
+      instructionPracticeSupport: 'If the audio is hard to hear during practice, tell the researcher before starting the main test.',
       startPractice: 'Start practice',
       transitionTitle: 'Practice complete',
       transitionBody: 'You will now start the main test. <strong>No feedback is shown</strong> during the main test. Audio is played <strong>only once</strong>. Start when you are ready.',
+      transitionReminder: 'Start the main test when the audio volume, key mapping, and decision rule are clear.',
+      practiceSummary: 'Practice result: {correct} / {total} correct',
+      practiceSummaryDetails: '{timeouts} timed out, {audioFailed} audio failed',
       startMain: 'Start main test',
       resultTitle: 'Test complete',
       resultThanks: 'Thank you for your participation.',
       downloadAgain: 'Download again',
       endNote: 'The result file has been saved to the Downloads folder. Please share it according to the researcher’s instructions.',
+      resultFilename: 'Saved file: {filename}',
       appropriate: 'Appropriate',
       inappropriate: 'Inappropriate',
       keySuffix: 'key',
-      keyInstruction: 'If the displayed word is semantically appropriate, press <strong>{yesKey}</strong>. If it is inappropriate, press <strong>{noKey}</strong>. Respond as quickly and accurately as possible.',
+      keyInstruction: 'If the word you heard was semantically appropriate, press <strong>{yesKey}</strong>. If it was inappropriate, press <strong>{noKey}</strong>. Respond as quickly and accurately as possible.',
+      decisionPrompt: 'Judge the word you heard in context.',
       timedInstruction: 'After the audio ends, respond within the time limit. If no response is made in time, the test moves to the next trial.',
       untimedInstruction: 'There is no time limit, but please respond as quickly and accurately as possible.',
       keyPromptFallback: 'Respond with the F / J keys.',
@@ -272,7 +297,7 @@
       researchForm: 'Form',
       researchItemsTitle: 'Presented Words and Item Parameters',
       researchFixedNote: 'These are the 40 items used in the fixed form. The actual order is constrained-randomized for each session.',
-      researchAdaptiveNote: 'These are the 70 candidate items used by the adaptive version. The actual administered items and order are selected from this pool based on responses.',
+      researchAdaptiveNote: 'These are the full 160 candidate items used by the adaptive version. The actual administered items and order are selected from this pool based on responses.',
       researchNoItems: 'No item information is available.',
       researchColRank: 'rank',
       researchColCondition: 'condition',
@@ -352,7 +377,16 @@
       url_params_raw: '', user_agent: ''
     },
 
-    practice: { log: [], currentIndex: 0, completed: false, n_correct: 0 },
+    practice: {
+      log: [],
+      currentIndex: 0,
+      completed: false,
+      n_correct: 0,
+      started_at: '',
+      completed_at: '',
+      instruction_version: UX_INSTRUCTION_VERSION,
+      summary: null
+    },
 
     cat: null,
     currentItemRef: null,
@@ -562,7 +596,7 @@
     state.params.target_se = boundedNumberParam(
       p, 'target_se', DEFAULTS.target_se, 0.05, 2.0, false);
     state.params.min_items = boundedNumberParam(
-      p, 'min_items', DEFAULTS.min_items, 1, 160, true);
+      p, 'min_items', DEFAULTS.min_items, 0, 160, true);
     state.params.max_items = boundedNumberParam(
       p, 'max_items', DEFAULTS.max_items, 1, 160, true);
     state.params.max_play_fails = boundedNumberParam(
@@ -678,6 +712,7 @@
     updateResponseLabels();
     updateKeyInstruction();
     updateTimingInstruction();
+    updatePracticeSummary();
   }
 
   function presentationOption (name, fallback) {
@@ -749,8 +784,8 @@
     const blueprint = APP_CONFIG.blueprint || {};
     const floorRaw = Number(blueprint.minAllowedItems);
     const capRaw = Number(blueprint.maxItems);
-    const floor = Number.isFinite(floorRaw) && floorRaw > 0 ? Math.round(floorRaw) : 20;
-    const cap = Number.isFinite(capRaw) && capRaw >= floor ? Math.round(capRaw) : 70;
+    const floor = Number.isFinite(floorRaw) && floorRaw >= 0 ? Math.round(floorRaw) : 0;
+    const cap = Number.isFinite(capRaw) && capRaw >= Math.max(1, floor) ? Math.round(capRaw) : 160;
     return { floor: floor, cap: Math.max(floor, cap) };
   }
 
@@ -850,7 +885,7 @@
       let maxItems = boundedNumberValue(
         opts.max_items === undefined ? state.params.max_items : opts.max_items,
         adaptiveBounds.cap,
-        adaptiveBounds.floor,
+        Math.max(1, adaptiveBounds.floor),
         adaptiveBounds.cap,
         true
       );
@@ -1130,31 +1165,70 @@
     }));
   }
 
-  function adaptiveBlueprint () {
-    const fixed = getSelectedForm('fixed40_disjoint');
-    const extended = getSelectedForm('extended70_disjoint');
+  function numberFromConfig (value, fallback) {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.round(n) : fallback;
+  }
+
+  function adaptiveCandidateSource () {
     const cfg = APP_CONFIG.blueprint || {};
-    const minItems = cfg.minItems || (fixed && fixed.n_items) || 40;
-    const minHit = cfg.minHit || Math.floor(minItems / 2);
-    const minCR = cfg.minCR || (minItems - minHit);
-    const maxItems = cfg.maxItems || (extended && extended.n_items) || 70;
-    const maxHit = cfg.maxHit || (extended && extended.n_hit) || Math.floor(maxItems / 2);
-    const maxCR = cfg.maxCR || (extended && extended.n_cr) || (maxItems - maxHit);
+    const candidateSet = cfg.candidateSet || 'full160_item_bank';
+    if (candidateSet === 'extended70_disjoint') {
+      const extended = getSelectedForm('extended70_disjoint');
+      if (extended && extended.items && extended.items.length) {
+        return {
+          candidateSet: 'extended70_disjoint',
+          form: extended,
+          items: itemsFromSelectedForm(extended)
+        };
+      }
+    }
+    return {
+      candidateSet: 'full160_item_bank',
+      form: null,
+      items: withItemIds(state.calibration.item_bank_hit)
+        .concat(withItemIds(state.calibration.item_bank_cr))
+    };
+  }
+
+  function adaptiveDisallowWordOverlap () {
+    const cfg = APP_CONFIG.blueprint || {};
+    return cfg.disallowWordOverlap !== false;
+  }
+
+  function adaptiveReportingMinPerCondition () {
+    const cfg = APP_CONFIG.blueprint || {};
+    const n = Number(cfg.reportingMinPerCondition);
+    return Number.isFinite(n) && n >= 0 ? Math.round(n) : 1;
+  }
+
+  function adaptiveBlueprint () {
+    const cfg = APP_CONFIG.blueprint || {};
+    const source = adaptiveCandidateSource();
+    const counts = source.items.reduce((acc, it) => {
+      if (it.condition === 'Hit') acc.hit++;
+      if (it.condition === 'CR') acc.cr++;
+      return acc;
+    }, { hit: 0, cr: 0 });
+    const minItems = numberFromConfig(cfg.minItems, 0);
+    const minHit = numberFromConfig(cfg.minHit, Math.floor(minItems / 2));
+    const minCR = numberFromConfig(cfg.minCR, minItems - minHit);
+    const maxItems = numberFromConfig(cfg.maxItems, source.items.length || 160);
+    const maxHit = numberFromConfig(cfg.maxHit, counts.hit || Math.floor(maxItems / 2));
+    const maxCR = numberFromConfig(cfg.maxCR, counts.cr || (maxItems - maxHit));
     return { minItems, minHit, minCR, maxItems, maxHit, maxCR };
   }
 
   function buildAdaptivePools () {
-    const extended = getSelectedForm('extended70_disjoint');
-    const source = extended ? itemsFromSelectedForm(extended)
-                            : withItemIds(state.calibration.item_bank_hit)
-                                .concat(withItemIds(state.calibration.item_bank_cr));
-    const hit = source.filter(it => it.condition === 'Hit');
-    const cr = source.filter(it => it.condition === 'CR');
+    const source = adaptiveCandidateSource();
+    const hit = source.items.filter(it => it.condition === 'Hit');
+    const cr = source.items.filter(it => it.condition === 'CR');
     state.adaptiveItems = hit.concat(cr);
     return {
       hit: hit,
       cr: cr,
-      form: extended
+      form: source.form,
+      candidateSet: source.candidateSet
     };
   }
 
@@ -1169,7 +1243,7 @@
       return window.CAT1F.createTwoCondition(pools.hit, pools.cr, {
         algorithm: state.algorithm,
         quotaTol: state.params.quota_tol,
-        disallowWordOverlap: true,
+        disallowWordOverlap: adaptiveDisallowWordOverlap(),
         maxConditionRun: maxConditionRun(),
         randomizeConditionTies: true,
         minItems: state.params.min_items,
@@ -1292,16 +1366,17 @@
 
   function researchItemRows () {
     if (!state.calibration) return [];
-    const formName = state.delivery === 'fixed40'
-      ? 'fixed40_disjoint'
-      : 'extended70_disjoint';
-    const form = getSelectedForm(formName);
-    const source = form && form.items && form.items.length
+    let candidateSet = 'fixed40_disjoint';
+    let form = getSelectedForm('fixed40_disjoint');
+    let source = form && form.items && form.items.length
       ? itemsFromSelectedForm(form)
-      : (state.delivery === 'adaptive'
-          ? withItemIds(state.calibration.item_bank_hit)
-              .concat(withItemIds(state.calibration.item_bank_cr))
-          : []);
+      : [];
+    if (state.delivery === 'adaptive') {
+      const adaptiveSource = adaptiveCandidateSource();
+      candidateSet = adaptiveSource.candidateSet;
+      form = adaptiveSource.form;
+      source = adaptiveSource.items;
+    }
     return source.slice()
       .sort((a, b) => {
         if (a.condition !== b.condition) return a.condition === 'Hit' ? -1 : 1;
@@ -1309,7 +1384,7 @@
       })
       .map((it, idx) => ({
         form_id: form ? form.form_id : '',
-        candidate_set: formName,
+        candidate_set: candidateSet,
         display_order: idx + 1,
         rank: it.rank || '',
         item_id: mkItemId(it),
@@ -1414,8 +1489,8 @@
         max_play_fails: maxFailsEl ? maxFailsEl.value : state.params.max_play_fails,
         algorithm: algorithmEl ? algorithmEl.value : 'blueprint',
         stop_rule: stopRuleEl ? stopRuleEl.value : 'blueprint_pser',
-        min_items: minItemsEl ? minItemsEl.value : (targetAdaptive ? 40 : state.params.min_items),
-        max_items: maxItemsEl ? maxItemsEl.value : (targetAdaptive ? 70 : state.params.max_items),
+        min_items: minItemsEl ? minItemsEl.value : (targetAdaptive ? DEFAULTS.min_items : state.params.min_items),
+        max_items: maxItemsEl ? maxItemsEl.value : (targetAdaptive ? DEFAULTS.max_items : state.params.max_items),
         target_se: targetSeEl ? targetSeEl.value : DEFAULTS.target_se,
         stop_pser: stopPserEl ? stopPserEl.value : DEFAULTS.stop_pser,
         quota_tol: quotaTolEl ? quotaTolEl.value : DEFAULTS.quota_tol
@@ -1487,7 +1562,7 @@
           state.params.min_items = boundedNumberValue(
             overrides.min_items, defaultMinItems, adaptiveBounds.floor, adaptiveBounds.cap, true);
           state.params.max_items = boundedNumberValue(
-            overrides.max_items, adaptiveBounds.cap, adaptiveBounds.floor, adaptiveBounds.cap, true);
+            overrides.max_items, adaptiveBounds.cap, Math.max(1, adaptiveBounds.floor), adaptiveBounds.cap, true);
           if (state.params.max_items < state.params.min_items) {
             state.params.max_items = state.params.min_items;
           }
@@ -1575,16 +1650,17 @@
       return;
     }
 
+    const adaptiveSource = state.delivery === 'adaptive' ? adaptiveCandidateSource() : null;
     const form = state.delivery === 'fixed40'
       ? getSelectedForm('fixed40_disjoint')
-      : getSelectedForm('extended70_disjoint');
+      : adaptiveSource.form;
     const rows = researchItemRows();
     const itemSummary = summarizeResearchItems(rows);
     const timing = isTimed()
       ? t('researchTimedValue', { ms: responseWindowMs() })
       : t('researchUntimedValue');
     const model = state.delivery === 'adaptive'
-      ? 'per-condition 1D 2PL blueprint CAT (mod_hit / mod_cr)'
+      ? 'full 160-item per-condition 1D 2PL blueprint CAT (mod_hit / mod_cr)'
       : 'per-condition 1D 2PL disjoint fixed form (mod_hit / mod_cr)';
     const note = state.delivery === 'adaptive'
       ? t('researchAdaptiveNote')
@@ -1616,7 +1692,7 @@
                 '" max="' + adaptiveBounds.cap + '" step="1" value="' +
                 escapeHtml(state.params.min_items) + '" /></label>' +
             '<label><span>' + escapeHtml(t('researchMaxItemsLabel')) + '</span>' +
-              '<input type="number" id="research-max-items" min="' + adaptiveBounds.floor +
+              '<input type="number" id="research-max-items" min="' + Math.max(1, adaptiveBounds.floor) +
                 '" max="' + adaptiveBounds.cap + '" step="1" value="' +
                 escapeHtml(state.params.max_items) + '" /></label>' +
             '<label><span>' + escapeHtml(t('researchTargetSeLabel')) + '</span>' +
@@ -1918,7 +1994,7 @@
         btnPlay.disabled = true;
         btnPlay.textContent = t('playbackUnavailable');
         setStatus(t('playbackUnavailableStatus'));
-        $('target-word-display').textContent = targetword;
+        $('target-word-display').textContent = t('decisionPrompt');
         if (area) area.classList.remove('hidden');
         addOrUpdateSkipOption();
       }
@@ -1943,7 +2019,7 @@
       if (committed) return;
       btnPlay.disabled = true;
       btnPlay.classList.add('hidden');
-      $('target-word-display').textContent = targetword;
+      $('target-word-display').textContent = t('decisionPrompt');
       if (area) area.classList.remove('hidden');
       setStatus(t('audioEnded', { prompt: responseKeyPrompt() }));
       state.questionStart = performance.now();
@@ -1995,11 +2071,63 @@
     state.practice.currentIndex = 0;
     state.practice.log = [];
     state.practice.n_correct = 0;
+    state.practice.completed = false;
+    state.practice.started_at = nowISO();
+    state.practice.completed_at = '';
+    state.practice.instruction_version = UX_INSTRUCTION_VERSION;
+    state.practice.summary = null;
     state.currentTrialContext = null;
     logEvent('practice_start');
     showStage('stage-trial');
     $('trial-label').textContent = t('practiceLabel');
     showPracticeItem();
+  }
+
+  function summarizePracticeLog () {
+    const log = state.practice.log || [];
+    const nTotal = state.practice.items && state.practice.items.length
+      ? state.practice.items.length
+      : log.length;
+    const nCorrect = log.filter(row => row && row.correct === 1).length;
+    const nAnswered = log.filter(row => row && (row.correct === 0 || row.correct === 1)).length;
+    const nTimedOut = log.filter(row => row && row.timed_out).length;
+    const nAudioFailed = log.filter(row => row && row.audio_failed).length;
+    return {
+      instruction_version: UX_INSTRUCTION_VERSION,
+      n_total: nTotal,
+      n_logged: log.length,
+      n_answered: nAnswered,
+      n_correct: nCorrect,
+      n_timed_out: nTimedOut,
+      n_audio_failed: nAudioFailed,
+      accuracy: nTotal ? nCorrect / nTotal : null
+    };
+  }
+
+  function updatePracticeSummary () {
+    const el = $('practice-summary');
+    if (!el || !state.practice.completed) return;
+    const summary = state.practice.summary || summarizePracticeLog();
+    let text = t('practiceSummary', {
+      correct: summary.n_correct,
+      total: summary.n_total
+    });
+    if (summary.n_timed_out || summary.n_audio_failed) {
+      text += ' (' + t('practiceSummaryDetails', {
+        timeouts: summary.n_timed_out,
+        audioFailed: summary.n_audio_failed
+      }) + ')';
+    }
+    el.textContent = text;
+  }
+
+  function completePracticeAndTransition () {
+    state.practice.completed = true;
+    state.practice.completed_at = nowISO();
+    state.practice.summary = summarizePracticeLog();
+    logEvent('practice_complete', state.practice.summary);
+    updatePracticeSummary();
+    showStage('stage-transition');
   }
 
   function showPracticeItem () {
@@ -2034,8 +2162,7 @@
         if (state.practice.currentIndex < state.practice.items.length) {
           showPracticeItem();
         } else {
-          state.practice.completed = true;
-          showStage('stage-transition');
+          completePracticeAndTransition();
         }
         return;
       }
@@ -2101,8 +2228,7 @@
       if (state.practice.currentIndex < state.practice.items.length) {
         showPracticeItem();
       } else {
-        state.practice.completed = true;
-        showStage('stage-transition');
+        completePracticeAndTransition();
       }
     }, 2200);
   }
@@ -2142,6 +2268,7 @@
         : { stop: false };
     }
     if (n >= state.params.max_items) return { stop: true, reason: 'max_items' };
+    if (n === 0) return { stop: false };
     if (n < state.params.min_items) return { stop: false };
     if (state.stopRule === 'max_items') return { stop: false };
     const se = currentPrecisionSE();
@@ -2157,7 +2284,7 @@
       return { stop: false };
     }
     const n = state.cat.usedCount();
-    if (n < state.params.min_items || !sel || !Number.isFinite(sel.info)) {
+    if (n === 0 || n < state.params.min_items || !sel || !Number.isFinite(sel.info)) {
       return { stop: false };
     }
     const pred = typeof state.cat.predictedSeReduction === 'function'
@@ -2425,11 +2552,17 @@
       Number.isFinite(per.hit.theta) && Number.isFinite(per.cr.theta)
       ? Math.abs(per.hit.theta - per.cr.theta)
       : null;
+    const thetaGapFlag = thetaGap !== null ? thetaGap > 1 : null;
+    const allYesFlag = answered.length > 0 && nYes === answered.length;
+    const allNoFlag = answered.length > 0 && nNo === answered.length;
     return {
       theta_gap: thetaGap,
-      aberrance_theta_gap_flag: thetaGap !== null ? thetaGap > 1 : null,
-      all_yes_flag: answered.length > 0 && nYes === answered.length,
-      all_no_flag: answered.length > 0 && nNo === answered.length,
+      response_pattern_theta_gap_flag: thetaGapFlag,
+      aberrance_theta_gap_flag: thetaGapFlag,
+      uniform_yes_flag: allYesFlag,
+      uniform_no_flag: allNoFlag,
+      all_yes_flag: allYesFlag,
+      all_no_flag: allNoFlag,
       yes_response_rate: answered.length ? nYes / answered.length : null,
       median_rt_ms: medianRt,
       median_rt_hit_ms: median(hitRt),
@@ -2483,7 +2616,8 @@
 
   function buildProtocolManifest () {
     const fixedForm = getSelectedForm('fixed40_disjoint');
-    const adaptiveForm = getSelectedForm('extended70_disjoint');
+    const adaptiveSource = state.delivery === 'adaptive' ? adaptiveCandidateSource() : null;
+    const adaptiveForm = adaptiveSource ? adaptiveSource.form : null;
     return {
       generated_at: nowISO(),
       app_version: APP_VERSION,
@@ -2510,6 +2644,14 @@
         keymap_policy: state.params.keymap || 'counterbalanced',
         response_keymap_id: state.responseMapping ? state.responseMapping.keymap_id : ''
       },
+      ux: {
+        instruction_version: UX_INSTRUCTION_VERSION,
+        practice_trial_count: state.practice.items ? state.practice.items.length : 0,
+        practice_feedback_visible: true,
+        main_feedback_visible: false,
+        targetword_spelling_visible_to_participant: false,
+        participant_score_visible: false
+      },
       adaptive: {
         algorithm: state.delivery === 'adaptive' ? state.algorithm : '',
         stop_rule: state.stopRule,
@@ -2522,6 +2664,9 @@
       selected_forms: {
         fixed40: fixedForm ? fixedForm.form_id : '',
         adaptive: adaptiveForm ? adaptiveForm.form_id : ''
+      },
+      candidate_sets: {
+        adaptive: adaptiveSource ? adaptiveSource.candidateSet : ''
       },
       item_selection_model: state.session.item_selection_model || '',
       presentation_order_policy: state.session.presentation_order_policy || '',
@@ -2593,24 +2738,27 @@
       '>=' + minPerCondition,
       'Minimum answered CR items required for reporting.'
     );
+    const overlapAllowed = state.delivery === 'adaptive' && !adaptiveDisallowWordOverlap();
     add(
       'targetword_overlap',
-      finalObj.targetword_overlap_count === 0 ? 'ok' : 'error',
+      overlapAllowed || finalObj.targetword_overlap_count === 0 ? 'ok' : 'error',
       finalObj.targetword_overlap_count,
-      '0',
-      'Hit and CR should not reuse the same targetword in the same session.'
+      overlapAllowed ? 'allowed' : '0',
+      overlapAllowed
+        ? 'Targetword overlap is allowed in the full-160 adaptive item bank.'
+        : 'Hit and CR should not reuse the same targetword in the same session.'
     );
     add(
-      'all_yes_response_pattern',
-      finalObj.all_yes_flag ? 'warn' : 'ok',
-      finalObj.all_yes_flag,
+      'uniform_yes_response_pattern',
+      finalObj.uniform_yes_flag ? 'warn' : 'ok',
+      finalObj.uniform_yes_flag,
       'false',
       'All responses were Appropriate.'
     );
     add(
-      'all_no_response_pattern',
-      finalObj.all_no_flag ? 'warn' : 'ok',
-      finalObj.all_no_flag,
+      'uniform_no_response_pattern',
+      finalObj.uniform_no_flag ? 'warn' : 'ok',
+      finalObj.uniform_no_flag,
       'false',
       'All responses were Inappropriate.'
     );
@@ -2619,7 +2767,7 @@
       Number.isFinite(finalObj.theta_gap) && finalObj.theta_gap > 1 ? 'warn' : 'ok',
       finalObj.theta_gap,
       '<=1',
-      'Large Hit/CR theta gap may indicate condition-specific aberrance.'
+      'Large Hit/CR theta gap may indicate condition-specific response-pattern misfit.'
     );
     add(
       'too_fast_response_rate',
@@ -2672,16 +2820,16 @@
     const per = perConditionScore(allResponses);
     const mirt2f = scorePostHoc2F(allResponses);
 
-    // Reporting is valid only when (a) the total number of answered
-    // items clears the minimum, AND (b) each condition has at least
-    // MIN_PER_CONDITION answered items. The second check prevents
-    // sessions that hit the floor by accumulating items in a single
-    // condition from silently imputing theta = 0 / SE = 1 for the
-    // unobserved condition in computeTOEICEstimate().
+    // Reporting is valid only when both condition-specific posteriors have
+    // observed responses. Adaptive no longer has a 40-item stopping floor, but
+    // this guard prevents an unobserved condition from silently using the prior
+    // theta = 0 / SE = 1 in computeTOEICEstimate().
     const MIN_PER_CONDITION =
-      (state.delivery === 'fixed40' || state.delivery === 'adaptive')
+      state.delivery === 'fixed40'
         ? Math.floor(state.params.min_items / 2)
-        : 3;
+        : state.delivery === 'adaptive'
+          ? adaptiveReportingMinPerCondition()
+          : 3;
     const enoughTotal       = coverage.answered >= state.params.min_items;
     const enoughHit         = coverage.hit.answered >= MIN_PER_CONDITION;
     const enoughCR          = coverage.cr.answered  >= MIN_PER_CONDITION;
@@ -2721,7 +2869,10 @@
       n_cr_skipped:       coverage.cr.skipped,
       targetword_overlap_count: countTargetwordOverlap(allResponses),
       theta_gap:          behavior.theta_gap !== null ? round6(behavior.theta_gap) : null,
+      response_pattern_theta_gap_flag: behavior.response_pattern_theta_gap_flag,
       aberrance_theta_gap_flag: behavior.aberrance_theta_gap_flag,
+      uniform_yes_flag:   behavior.uniform_yes_flag,
+      uniform_no_flag:    behavior.uniform_no_flag,
       all_yes_flag:       behavior.all_yes_flag,
       all_no_flag:        behavior.all_no_flag,
       yes_response_rate:  behavior.yes_response_rate !== null ? round6(behavior.yes_response_rate) : null,
@@ -2757,6 +2908,7 @@
     state.session.user_agent = navigator.userAgent;
     state.session.calibration_version = state.calibration.version || 'unknown';
     state.session.app_version = APP_VERSION;
+    state.session.instruction_version = UX_INSTRUCTION_VERSION;
     state.session.language = state.lang;
     state.session.research_mode = state.researchMode;
     state.session.reg = state.calibration.regression.per_condition;
@@ -2765,18 +2917,20 @@
     state.session.selected_form_fixed40 = getSelectedForm('fixed40_disjoint')
       ? getSelectedForm('fixed40_disjoint').form_id
       : '';
-    state.session.selected_form_adaptive = getSelectedForm('extended70_disjoint')
-      ? getSelectedForm('extended70_disjoint').form_id
+    const adaptiveSource = state.delivery === 'adaptive' ? adaptiveCandidateSource() : null;
+    state.session.selected_form_adaptive = adaptiveSource
+      ? (adaptiveSource.form ? adaptiveSource.form.form_id : adaptiveSource.candidateSet)
       : '';
+    state.session.adaptive_candidate_set = adaptiveSource ? adaptiveSource.candidateSet : '';
     state.session.item_selection_model = state.delivery === 'adaptive'
-      ? 'per-condition 1D 2PL blueprint CAT (mod_hit / mod_cr)'
+      ? 'full 160-item per-condition 1D 2PL blueprint CAT (mod_hit / mod_cr)'
       : state.delivery === 'fixed40'
       ? 'per-condition 1D 2PL disjoint fixed form (mod_hit / mod_cr)'
       : 'legacy combined 1F / 2F research mode';
     state.session.presentation_order_policy = state.delivery === 'fixed40'
       ? 'balanced_random_condition_order'
       : state.delivery === 'adaptive'
-      ? 'blueprint_random_tie_condition_order'
+      ? 'blueprint_random_tie_condition_order_full160'
       : 'model_selected_condition_order';
     state.session.max_condition_run = maxConditionRun();
     state.session.auto_play_audio = autoPlayAudio();
@@ -2794,7 +2948,7 @@
     state.session.backbone_model = state.delivery === 'fixed40'
       ? 'fixed40_disjoint_balanced_short_form'
       : (state.delivery === 'adaptive'
-          ? 'per_condition_1d_2pl_disjoint_blueprint'
+          ? 'full160_per_condition_1d_2pl_blueprint'
           : (state.mode === '1F' ? 'combined_1f_2pl' : 'compensatory_2f_mirt'));
     state.session.min_answered_required = state.params.min_items;
     state.session.min_answered_per_condition_required = MIN_PER_CONDITION;
@@ -2826,8 +2980,9 @@
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const modeForFile = state.delivery === 'adaptive' ? state.algorithm : state.delivery;
     const filename = 'LJT_CAT_' + modeForFile + '_' + safeName + '_' + safeId + '_' + ts + '.xlsx';
+    state.session.result_filename = filename;
     const fnEl = $('filename-display');
-    if (fnEl) fnEl.textContent = filename;
+    if (fnEl) fnEl.textContent = t('resultFilename', { filename: filename });
     logEvent('download_prepare', { filename: filename });
 
     // Flatten responses for Excel
@@ -2882,6 +3037,7 @@
     const catTrace = buildCatTrace(allResponses);
     const qualityFlags = buildQualityFlags(finalObj, MIN_PER_CONDITION);
     const protocolManifest = buildProtocolManifest();
+    state.practice.summary = summarizePracticeLog();
 
     const payload = {
       participant: state.participant,
@@ -2896,7 +3052,7 @@
         timing_mode:    state.params.timing,
         response_window_ms: responseWindowMs()
       }),
-      practice:  state.practice,
+      practice:  Object.assign({}, state.practice),
       final:     finalObj,
       responses: flatResponses,
       item_bank: researchItemRows(),

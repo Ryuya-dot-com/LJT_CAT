@@ -4,13 +4,16 @@ window.LJT_APP_CONFIG = {
   defaultAlgorithm: 'blueprint',
   defaultStopRule: 'blueprint_pser',
   blueprint: {
-    minAllowedItems: 20,
-    minItems: 40,
-    minHit: 20,
-    minCR: 20,
-    maxItems: 70,
-    maxHit: 35,
-    maxCR: 35
+    candidateSet: 'full160_item_bank',
+    disallowWordOverlap: false,
+    minAllowedItems: 0,
+    minItems: 0,
+    minHit: 0,
+    minCR: 0,
+    maxItems: 160,
+    maxHit: 80,
+    maxCR: 80,
+    reportingMinPerCondition: 1
   },
   presentation: {
     maxConditionRun: 2,
@@ -22,8 +25,8 @@ window.LJT_APP_CONFIG = {
     responseWindowMs: 1250
   },
   defaults: {
-    min_items: 40,
-    max_items: 70,
+    min_items: 0,
+    max_items: 160,
     target_se: 0.30,
     timing: 'timed',
     response_window_ms: 1250,

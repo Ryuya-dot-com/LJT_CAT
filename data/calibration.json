@@ -1,6 +1,8 @@
 {
-  "version": "2.1",
-  "generated_at": "2026-04-26T07:34:04+0900",
+  "version": "2.2",
+  "generated_at": "2026-04-28T15:53:49+0900",
+  "toeic_id_basis": "joint_anonymised_map",
+  "toeic_overlap_n": 244,
   "item_bank_1f": [
     {
       "item_id": "accountant_HIT",
