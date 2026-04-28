@@ -45,6 +45,7 @@
     auto_play_audio: true,
     fixation_ms: 500,
     post_response_ms: 350,
+    pace: 'auto',
     max_condition_run: 2
   }, APP_CONFIG.defaults || {});
 
@@ -93,6 +94,8 @@
       transitionReminder: '音量、キー割り当て、判断方法に問題がなければ本試行を開始してください。不安がある場合は本試行に進む前に研究者へ知らせてください。',
       practiceSummary: '練習結果: {correct} / {total} 正解',
       practiceSummaryDetails: '時間切れ {timeouts} 問、音声失敗 {audioFailed} 問',
+      advancePrompt: '準備ができたら Space キーを押すか、下のボタンで次へ進んでください。',
+      advanceButton: '次へ進む',
       startMain: '本試行を開始する',
       resultTitle: 'テスト終了',
       resultThanks: 'ご協力ありがとうございました。',
@@ -123,9 +126,9 @@
       mainLabel: '本試行',
       questionCounter: '本試行 {n} 問目',
       practiceCounter: '練習 {n} / 4',
-      timeoutFeedback: '時間切れです<br><small>正しい答えは「<strong>{answer}</strong>」でした。次の問題に進みます…</small>',
-      correctFeedback: '✔ 正解です! <br><small>次の問題に進みます…</small>',
-      wrongFeedback: '✘ 不正解です<br><small>正しい答えは「<strong>{answer}</strong>」でした。次の問題に進みます…</small>',
+      timeoutFeedback: '時間切れです<br><small>正しい答えは「<strong>{answer}</strong>」でした。</small>',
+      correctFeedback: '✔ 正解です!',
+      wrongFeedback: '✘ 不正解です<br><small>正しい答えは「<strong>{answer}</strong>」でした。</small>',
       savingStatus: '結果を保存中...',
       savedStatus: '結果ファイルを保存しました。',
       saveFailed: '⚠ 結果ファイルの保存に失敗しました。ページを更新して再試行してください。',
@@ -170,6 +173,9 @@
       researchAutoplayOff: '手動再生',
       researchFixationMsLabel: '注視点時間 (ms)',
       researchPostResponseMsLabel: '回答後待機時間 (ms)',
+      researchPaceModeLabel: '回答後の進行',
+      researchPaceAuto: '自動で次へ',
+      researchPaceSelf: 'Spaceキーで次へ',
       researchMaxConditionRunLabel: '同一条件の最大連続数',
       researchMaxPlayFailsLabel: '音声再生失敗の許容回数',
       researchAdaptiveSettingsTitle: 'Adaptive設定',
@@ -250,6 +256,8 @@
       transitionReminder: 'Start the main test when the audio volume, key mapping, and decision rule are clear. If anything is unclear, tell the researcher before starting.',
       practiceSummary: 'Practice result: {correct} / {total} correct',
       practiceSummaryDetails: '{timeouts} timed out, {audioFailed} audio failed',
+      advancePrompt: 'When ready, press the Space key or use the button below to continue.',
+      advanceButton: 'Next',
       startMain: 'Start main test',
       resultTitle: 'Test complete',
       resultThanks: 'Thank you for your participation.',
@@ -280,9 +288,9 @@
       mainLabel: 'Main test',
       questionCounter: 'Main test trial {n}',
       practiceCounter: 'Practice {n} / 4',
-      timeoutFeedback: 'Time out<br><small>The correct answer was “<strong>{answer}</strong>”. Moving to the next trial…</small>',
-      correctFeedback: '✔ Correct! <br><small>Moving to the next trial…</small>',
-      wrongFeedback: '✘ Incorrect<br><small>The correct answer was “<strong>{answer}</strong>”. Moving to the next trial…</small>',
+      timeoutFeedback: 'Time out<br><small>The correct answer was “<strong>{answer}</strong>”.</small>',
+      correctFeedback: '✔ Correct!',
+      wrongFeedback: '✘ Incorrect<br><small>The correct answer was “<strong>{answer}</strong>”.</small>',
       savingStatus: 'Saving result file...',
       savedStatus: 'The result file has been saved.',
       saveFailed: '⚠ Failed to save the result file. Please reload the page and try again.',
@@ -327,6 +335,9 @@
       researchAutoplayOff: 'Manual play',
       researchFixationMsLabel: 'Fixation duration (ms)',
       researchPostResponseMsLabel: 'Post-response delay (ms)',
+      researchPaceModeLabel: 'Post-response advance',
+      researchPaceAuto: 'Auto-advance',
+      researchPaceSelf: 'Space key to continue',
       researchMaxConditionRunLabel: 'Maximum same-condition run',
       researchMaxPlayFailsLabel: 'Allowed audio playback failures',
       researchAdaptiveSettingsTitle: 'Adaptive Settings',
@@ -634,6 +645,9 @@
       p, 'post_response_ms',
       Number(presentationOption('postResponseMs', DEFAULTS.post_response_ms)),
       0, 5000, true);
+    state.params.pace = booleanParam(p, 'self_paced', false)
+      ? 'self'
+      : normalizePace(p.get('pace') || presentationOption('pace', DEFAULTS.pace));
     state.params.max_condition_run = boundedNumberParam(
       p, 'max_condition_run',
       Number(presentationOption('maxConditionRun', DEFAULTS.max_condition_run)),
@@ -747,6 +761,10 @@
     return Number(state.params.post_response_ms);
   }
 
+  function isSelfPaced () {
+    return state.params.pace === 'self';
+  }
+
   function maxConditionRun () {
     return Number(state.params.max_condition_run);
   }
@@ -776,6 +794,13 @@
   function normalizeTiming (raw) {
     const value = String(raw || '').trim().toLowerCase();
     return value === 'untimed' ? 'untimed' : 'timed';
+  }
+
+  function normalizePace (raw) {
+    const value = String(raw || '').trim().toLowerCase();
+    return ['self', 'self_paced', 'manual', 'space', '1', 'true', 'yes', 'on'].includes(value)
+      ? 'self'
+      : 'auto';
   }
 
   function normalizeAlgorithm (raw) {
@@ -867,6 +892,7 @@
       10,
       true
     );
+    const pace = normalizePace(opts.pace || state.params.pace || DEFAULTS.pace);
     const keymap = normalizeKeymap(opts.keymap || state.params.keymap);
     u.pathname = deliveryPathname(u.pathname, delivery);
     u.searchParams.set('lang', state.lang);
@@ -874,6 +900,8 @@
     u.searchParams.set('auto_play_audio', boolToParam(autoPlay));
     u.searchParams.set('fixation_ms', String(fixMs));
     u.searchParams.set('post_response_ms', String(postMs));
+    u.searchParams.set('pace', pace);
+    u.searchParams.delete('self_paced');
     u.searchParams.set('max_condition_run', String(maxRun));
     u.searchParams.set('max_play_fails', String(maxFails));
     u.searchParams.set('keymap', keymap);
@@ -1070,6 +1098,71 @@
     if (y) y.onclick = null;
     if (n) n.onclick = null;
     setResponseButtonsEnabled(false);
+  }
+
+  function clearAdvancePrompt () {
+    if (typeof state.currentAdvanceCleanup === 'function') {
+      state.currentAdvanceCleanup();
+      state.currentAdvanceCleanup = null;
+    }
+    const prompt = $('advance-prompt');
+    if (prompt) prompt.remove();
+    const fb = $('feedback-area');
+    if (fb) fb.classList.remove('advance');
+  }
+
+  function waitForTrialAdvance (next, delayMs) {
+    clearAdvancePrompt();
+    if (!isSelfPaced()) {
+      window.setTimeout(next, Math.max(0, delayMs || 0));
+      return;
+    }
+
+    const fb = $('feedback-area');
+    const prompt = document.createElement('div');
+    prompt.id = 'advance-prompt';
+    prompt.className = 'advance-prompt';
+    const text = document.createElement('p');
+    text.textContent = t('advancePrompt');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'secondary-btn advance-btn';
+    button.textContent = t('advanceButton');
+    prompt.appendChild(text);
+    prompt.appendChild(button);
+    if (fb) {
+      fb.classList.remove('hidden');
+      fb.classList.add('advance');
+      fb.appendChild(prompt);
+    }
+
+    let done = false;
+    const proceed = (source) => {
+      if (done) return;
+      done = true;
+      logEvent('self_paced_advance', { advance_source: source || 'unknown' });
+      clearAdvancePrompt();
+      if (fb) fb.classList.add('hidden');
+      next();
+    };
+    const onKeyDown = event => {
+      const isSpace = event.code === 'Space' || event.key === ' ' || event.key === 'Spacebar';
+      if (!isSpace || event.repeat) return;
+      const tag = event.target && event.target.tagName
+        ? event.target.tagName.toLowerCase()
+        : '';
+      if (['input', 'textarea', 'select'].includes(tag)) return;
+      event.preventDefault();
+      proceed('space');
+    };
+    const onButtonClick = () => proceed('button');
+    document.addEventListener('keydown', onKeyDown);
+    button.addEventListener('click', onButtonClick);
+    state.currentAdvanceCleanup = () => {
+      document.removeEventListener('keydown', onKeyDown);
+      button.removeEventListener('click', onButtonClick);
+    };
+    logEvent('self_paced_wait_start', { advance_key: 'Space' });
   }
 
   function wireResponseInput (respond, options) {
@@ -1474,6 +1567,7 @@
     const autoPlayEl = $('research-auto-play-audio');
     const fixationEl = $('research-fixation-ms');
     const postResponseEl = $('research-post-response-ms');
+    const paceEl = $('research-pace-mode');
     const maxRunEl = $('research-max-condition-run');
     const maxFailsEl = $('research-max-play-fails');
     const algorithmEl = $('research-algorithm');
@@ -1500,6 +1594,7 @@
         auto_play_audio: autoPlayEl ? autoPlayEl.value === '1' : autoPlayAudio(),
         fixation_ms: fixationEl ? fixationEl.value : fixationMs(),
         post_response_ms: postResponseEl ? postResponseEl.value : postResponseMs(),
+        pace: paceEl ? paceEl.value : state.params.pace,
         max_condition_run: maxRunEl ? maxRunEl.value : maxConditionRun(),
         max_play_fails: maxFailsEl ? maxFailsEl.value : state.params.max_play_fails,
         algorithm: algorithmEl ? algorithmEl.value : 'blueprint',
@@ -1527,7 +1622,7 @@
     presetEl.addEventListener('change', refreshControls);
     customEl.addEventListener('input', refreshControls);
     [
-      keymapEl, autoPlayEl, fixationEl, postResponseEl, maxRunEl, maxFailsEl,
+      keymapEl, autoPlayEl, fixationEl, postResponseEl, paceEl, maxRunEl, maxFailsEl,
       algorithmEl, stopRuleEl, minItemsEl, maxItemsEl, targetSeEl, stopPserEl, quotaTolEl
     ].forEach(el => {
       if (!el) return;
@@ -1562,6 +1657,7 @@
           overrides.fixation_ms, DEFAULTS.fixation_ms, 0, 3000, true);
         state.params.post_response_ms = boundedNumberValue(
           overrides.post_response_ms, DEFAULTS.post_response_ms, 0, 5000, true);
+        state.params.pace = normalizePace(overrides.pace);
         state.params.max_condition_run = boundedNumberValue(
           overrides.max_condition_run, DEFAULTS.max_condition_run, 1, 10, true);
         state.params.max_play_fails = boundedNumberValue(
@@ -1596,6 +1692,7 @@
           auto_play_audio: autoPlayAudio(),
           fixation_ms: fixationMs(),
           post_response_ms: postResponseMs(),
+          pace: state.params.pace,
           max_condition_run: maxConditionRun(),
           max_play_fails: state.params.max_play_fails,
           keymap: state.params.keymap,
@@ -1766,6 +1863,13 @@
           '<label><span>' + escapeHtml(t('researchPostResponseMsLabel')) + '</span>' +
             '<input type="number" id="research-post-response-ms" min="0" max="5000" step="50" value="' +
               escapeHtml(postResponseMs()) + '" /></label>' +
+          '<label><span>' + escapeHtml(t('researchPaceModeLabel')) + '</span>' +
+            '<select id="research-pace-mode">' +
+              '<option value="auto"' + (!isSelfPaced() ? ' selected' : '') + '>' +
+                escapeHtml(t('researchPaceAuto')) + '</option>' +
+              '<option value="self"' + (isSelfPaced() ? ' selected' : '') + '>' +
+                escapeHtml(t('researchPaceSelf')) + '</option>' +
+            '</select></label>' +
           '<label><span>' + escapeHtml(t('researchMaxConditionRunLabel')) + '</span>' +
             '<input type="number" id="research-max-condition-run" min="1" max="10" step="1" value="' +
               escapeHtml(maxConditionRun()) + '" /></label>' +
@@ -1950,11 +2054,13 @@
     const autoPlay = autoPlayAudio();
     const fixationDurationMs = fixationMs();
 
+    clearAdvancePrompt();
     cleanupResponseInput();
     updateResponseLabels();
     if (area) area.classList.add('hidden');
     if (fixation) fixation.classList.add('hidden');
     $('feedback-area').classList.add('hidden');
+    $('feedback-area').classList.remove('advance');
     $('play-status').textContent = '';
     state.playedOnce = false;
     state.playFailCount = 0;
@@ -2238,7 +2344,7 @@
       fb.innerHTML = t('wrongFeedback', { answer: responseLabel(item.ANSWER) });
     }
 
-    setTimeout(() => {
+    waitForTrialAdvance(() => {
       state.practice.currentIndex++;
       if (state.practice.currentIndex < state.practice.items.length) {
         showPracticeItem();
@@ -2438,7 +2544,7 @@
       timed_out: timedOut
     });
     cleanupResponseInput();
-    setTimeout(nextItem, postResponseMs());
+    waitForTrialAdvance(nextItem, postResponseMs());
   }
 
   // ---- Finalization ----
@@ -2655,6 +2761,9 @@
         auto_play_audio: autoPlayAudio(),
         fixation_ms: fixationMs(),
         post_response_ms: postResponseMs(),
+        pace: state.params.pace,
+        self_paced: isSelfPaced(),
+        advance_key: isSelfPaced() ? 'Space' : '',
         max_condition_run: maxConditionRun(),
         keymap_policy: state.params.keymap || 'counterbalanced',
         response_keymap_id: state.responseMapping ? state.responseMapping.keymap_id : ''
@@ -2951,6 +3060,9 @@
     state.session.auto_play_audio = autoPlayAudio();
     state.session.fixation_ms = fixationMs();
     state.session.post_response_ms = postResponseMs();
+    state.session.pace = state.params.pace;
+    state.session.self_paced = isSelfPaced();
+    state.session.advance_key = isSelfPaced() ? 'Space' : '';
     state.session.timing_mode = state.params.timing;
     state.session.response_window_ms = responseWindowMs();
     state.session.response_keymap_id = state.responseMapping ? state.responseMapping.keymap_id : '';

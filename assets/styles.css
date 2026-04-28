@@ -498,6 +498,20 @@ input[type="text"]:focus, select:focus {
 }
 #feedback-area.correct { background: #d1fae5; color: #065f46; }
 #feedback-area.wrong   { background: #fee2e2; color: #991b1b; }
+#feedback-area.advance {
+  background: #eff6ff;
+  color: var(--color-primary-dark);
+}
+.advance-prompt {
+  margin-top: 10px;
+}
+.advance-prompt p {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.advance-btn {
+  min-width: 160px;
+}
 
 .result-box {
   background: #eff6ff;

@@ -75,6 +75,8 @@ Chrome / PC 前提の静的 HTML + vanilla JavaScript で動作する
   (`app_version = 2.8.0`)
 - 練習は採点対象外だが、本試行前の操作確認として、練習後に
   `n_answered`、`n_correct`、正答率、タイムアウト数、音声再生失敗数を画面表示する
+- 自己ペース実施は `?pace=self` または `?self_paced=1` で指定でき、
+  回答後に Space キーまたは「次へ進む」ボタンで次項目へ進む
 - 本試行終了後の画面では、保存された結果ファイル名だけを表示し、スコアや推定値は表示しない
 - Excel の `summary` / `metadata` / `protocol_manifest` には、実施時の
   instruction version、練習要約、UI上の表示・非表示方針を保存し、後から実施条件を確認できるようにする
@@ -132,6 +134,8 @@ https://ryuya-dot-com.github.io/LJT_CAT/
   `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=se&target_se=0.30`
 - Untimed 実施:
   `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?timing=untimed`
+- 自己ペース進行:
+  `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?timing=untimed&pace=self`
 - Timed 1500 ms 実施:
   `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?timing=timed&response_window_ms=1500`
 - 英語UI:
@@ -156,7 +160,9 @@ https://ryuya-dot-com.github.io/LJT_CAT/
 | `response_window_ms` | Timed の反応時間枠。デフォルトは 1250 ms |
 | `auto_play_audio` | `1` / `0`。音声を自動再生するか |
 | `fixation_ms` | 注視点 `+` の提示時間。デフォルトは 500 ms |
-| `post_response_ms` | 回答後、次項目へ進むまでの待機時間。デフォルトは 350 ms |
+| `post_response_ms` | `pace=auto` で回答後、次項目へ進むまでの待機時間。デフォルトは 350 ms |
+| `pace` | `auto`, `self`。`self` では回答後に Space キーまたはボタンで次へ進む |
+| `self_paced` | `1` のとき `pace=self` と同じ。後方互換用 |
 | `max_condition_run` | Hit または CR の最大連続提示数。デフォルトは 2 |
 | `lang` | `ja`, `en`。UI 表示言語 |
 | `research` | `1` のとき研究用確認パネルを表示 |

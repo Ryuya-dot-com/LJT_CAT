@@ -20,6 +20,7 @@ window.LJT_APP_CONFIG = {
     autoPlayAudio: true,
     fixationMs: 500,
     postResponseMs: 350,
+    pace: 'auto',
     keymap: 'counterbalanced',
     timing: 'timed',
     responseWindowMs: 1250
