@@ -18,6 +18,7 @@ window.LJT_APP_CONFIG = {
   presentation: {
     maxConditionRun: 2,
     autoPlayAudio: true,
+    audioRate: 1.0,
     fixationMs: 500,
     postResponseMs: 350,
     pace: 'auto',
@@ -31,6 +32,7 @@ window.LJT_APP_CONFIG = {
     target_se: 0.30,
     timing: 'timed',
     response_window_ms: 1250,
+    audio_rate: 1.0,
     lang: 'ja',
     stop_pser: 0.01,
     quota_tol: 0.20,

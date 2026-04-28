@@ -72,7 +72,7 @@ Chrome / PC 前提の静的 HTML + vanilla JavaScript で動作する
 - 参加者画面では、リスニング課題としての妥当性を優先し、判断対象語のスペル、
   `theta_hit` / `theta_cr`、SE、TOEIC 推定値、項目パラメータを表示しない
 - 練習インストラクションは `instruction_version = practice_instructions_20260428_refined` として管理する
-  (`app_version = 2.8.1`)
+  (`app_version = 2.8.2`)
 - 練習は採点対象外だが、本試行前の操作確認として、練習後に
   `n_answered`、`n_correct`、正答率、タイムアウト数、音声再生失敗数を画面表示する
 - 自己ペース実施は `?pace=self` または `?self_paced=1` で指定でき、
@@ -168,6 +168,7 @@ https://ryuya-dot-com.github.io/LJT_CAT/
 | `timing` | `timed`, `untimed`。通常は `timed` |
 | `response_window_ms` | Timed の反応時間枠。デフォルトは 1250 ms |
 | `auto_play_audio` | `1` / `0`。音声を自動再生するか |
+| `audio_rate` | 音声再生速度。デフォルトは `1.0`。研究者パネルでは `0.90` / `1.00` / `1.10` などを指定可能 |
 | `fixation_ms` | 注視点 `+` の提示時間。デフォルトは 500 ms |
 | `post_response_ms` | `pace=auto` で回答後、次項目へ進むまでの待機時間。デフォルトは 350 ms |
 | `pace` | `auto`, `self`。`self` では回答後に Space キーまたはボタンで次へ進む |
@@ -179,11 +180,13 @@ https://ryuya-dot-com.github.io/LJT_CAT/
 | `research` | `1` のとき研究用確認パネルを表示 |
 
 `?research=1` で開くと、研究者用パネルから `timing` と
-`response_window_ms` に加え、実施モード、音声自動再生、注視点、
+`response_window_ms` に加え、実施モード、音声自動再生、音声速度、注視点、
 回答後待機時間、同一条件の最大連続数、キー割当、EAP θグリッドなどを変更し、
 参加者配布用URLを生成できます。
 参加者画面ではこの設定は変更できず、実施条件は Excel の
 `protocol_manifest` と `metadata` に保存されます。
+音声速度を `0.9` や `1.1` に変更すると聴取条件が変わるため、比較研究では
+同じプロトコル内で必ず固定してください。
 
 固定40問版では `min_items` / `max_items` は常に40に固定されます。
 
@@ -343,7 +346,7 @@ LJT_result_{id}_{YYYY-MM-DDTHH-MM-SS}.xlsx
 | `cat_trace` | CAT / 固定フォームの項目提示順、running θ / SE、項目情報量 |
 | `quality_flags` | 報告可否、条件別回答数、タイムアウト率、マウス回答率、フォーカス離脱などの品質フラグ |
 | `events` | ステージ遷移、音声再生、target onset、応答などのイベントログ |
-| `protocol_manifest` | 参加者用URL、Timed/Untimed、反応時間枠、音声自動再生、注視点、回答後待機時間、最大連続数、選択フォーム、UI表示方針などの実施プロトコル |
+| `protocol_manifest` | 参加者用URL、Timed/Untimed、反応時間枠、音声自動再生、音声速度、注視点、回答後待機時間、最大連続数、選択フォーム、UI表示方針などの実施プロトコル |
 | `metadata` | URL設定、停止則、アルゴリズム、提示手順、Timed/Untimed、キー割り当て、回帰式、scoring backbone、練習要約 |
 
 `summary` には `instruction_version`、`practice_n_total`、`practice_n_answered`、

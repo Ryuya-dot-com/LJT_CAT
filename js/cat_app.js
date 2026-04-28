@@ -8,7 +8,7 @@
  *                 ?max_play_fails=3 (audio failure skip threshold)
  *                 ?keymap=counterbalanced|f_appropriate|j_appropriate
  *                 ?timing=timed|untimed &response_window_ms=1250
- *                 ?auto_play_audio=1|0 &fixation_ms=500 &post_response_ms=350 &max_condition_run=2
+ *                 ?auto_play_audio=1|0 &audio_rate=1 &fixation_ms=500 &post_response_ms=350 &max_condition_run=2
  *                 ?lang=ja|en
  *                 ?research=1 (show calibration / item-bank audit panel)
  *
@@ -22,8 +22,8 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '2.8.1';
-  const ASSET_CACHE_VERSION = '20260428j';
+  const APP_VERSION = '2.8.2';
+  const ASSET_CACHE_VERSION = '20260428k';
   const UX_INSTRUCTION_VERSION = 'practice_instructions_20260428_refined';
   const APP_CONFIG = Object.assign({
     delivery: 'landing',
@@ -44,6 +44,7 @@
     response_window_ms: 1250,
     lang: 'ja',
     auto_play_audio: true,
+    audio_rate: 1.0,
     fixation_ms: 500,
     post_response_ms: 350,
     pace: 'auto',
@@ -177,6 +178,9 @@
       researchKeymapFAppropriate: 'F = 適切 / J = 不適切',
       researchKeymapJAppropriate: 'F = 不適切 / J = 適切',
       researchAudioAutoplayLabel: '音声自動再生',
+      researchAudioRateLabel: '音声速度',
+      researchAudioRateHelp: '1.00が標準です。0.90や1.10などに変更すると聴取条件が変わるため、同じ研究内では必ず固定してください。',
+      researchAudioRateGuide: '目安: 0.90 = やや遅い、1.00 = 標準、1.10 = やや速い。',
       researchAutoplayOn: '自動再生',
       researchAutoplayOff: '手動再生',
       researchFixationMsLabel: '注視点時間 (ms)',
@@ -354,6 +358,9 @@
       researchKeymapFAppropriate: 'F = Appropriate / J = Inappropriate',
       researchKeymapJAppropriate: 'F = Inappropriate / J = Appropriate',
       researchAudioAutoplayLabel: 'Audio autoplay',
+      researchAudioRateLabel: 'Audio speed',
+      researchAudioRateHelp: '1.00 is the standard setting. Values such as 0.90 or 1.10 change the listening condition, so keep this fixed within a study.',
+      researchAudioRateGuide: 'Guide: 0.90 = slightly slower, 1.00 = standard, 1.10 = slightly faster.',
       researchAutoplayOn: 'Autoplay',
       researchAutoplayOff: 'Manual play',
       researchFixationMsLabel: 'Fixation duration (ms)',
@@ -725,6 +732,12 @@
       ['auto_play_audio', 'autoplay'],
       !!presentationOption('autoPlayAudio', DEFAULTS.auto_play_audio)
     );
+    state.params.audio_rate = boundedNumberValue(
+      p.get('audio_rate') || p.get('playback_rate'),
+      Number(presentationOption('audioRate', DEFAULTS.audio_rate)),
+      0.75,
+      1.25,
+      false);
     state.params.fixation_ms = boundedNumberParam(
       p, 'fixation_ms',
       Number(presentationOption('fixationMs', DEFAULTS.fixation_ms)),
@@ -866,6 +879,10 @@
     return Number(state.params.post_response_ms);
   }
 
+  function audioPlaybackRate () {
+    return boundedNumberValue(state.params.audio_rate, DEFAULTS.audio_rate, 0.75, 1.25, false);
+  }
+
   function isSelfPaced () {
     return state.params.pace === 'self';
   }
@@ -974,6 +991,13 @@
     const autoPlay = opts.auto_play_audio === undefined
       ? autoPlayAudio()
       : !!opts.auto_play_audio;
+    const audioRate = boundedNumberValue(
+      opts.audio_rate === undefined ? audioPlaybackRate() : opts.audio_rate,
+      DEFAULTS.audio_rate,
+      0.75,
+      1.25,
+      false
+    );
     const fixMs = boundedNumberValue(
       opts.fixation_ms === undefined ? fixationMs() : opts.fixation_ms,
       DEFAULTS.fixation_ms,
@@ -1035,6 +1059,8 @@
     u.searchParams.set('lang', state.lang);
     u.searchParams.set('timing', mode);
     u.searchParams.set('auto_play_audio', boolToParam(autoPlay));
+    u.searchParams.set('audio_rate', String(Number(audioRate.toFixed(2))));
+    u.searchParams.delete('playback_rate');
     u.searchParams.set('fixation_ms', String(fixMs));
     u.searchParams.set('post_response_ms', String(postMs));
     u.searchParams.set('pace', pace);
@@ -1724,6 +1750,7 @@
     const customEl = $('research-window-custom');
     const keymapEl = $('research-keymap');
     const autoPlayEl = $('research-auto-play-audio');
+    const audioRateEl = $('research-audio-rate');
     const fixationEl = $('research-fixation-ms');
     const postResponseEl = $('research-post-response-ms');
     const paceEl = $('research-pace-mode');
@@ -1759,6 +1786,7 @@
         response_window_ms: presetEl.value === 'custom' ? customEl.value : presetEl.value,
         keymap: keymapEl ? keymapEl.value : state.params.keymap,
         auto_play_audio: autoPlayEl ? autoPlayEl.value === '1' : autoPlayAudio(),
+        audio_rate: audioRateEl ? audioRateEl.value : audioPlaybackRate(),
         fixation_ms: fixationEl ? fixationEl.value : fixationMs(),
         post_response_ms: postResponseEl ? postResponseEl.value : postResponseMs(),
         pace: paceEl ? paceEl.value : state.params.pace,
@@ -1809,7 +1837,7 @@
     presetEl.addEventListener('change', refreshControls);
     customEl.addEventListener('input', refreshControls);
     [
-      keymapEl, autoPlayEl, fixationEl, postResponseEl, paceEl, maxRunEl, maxFailsEl,
+      keymapEl, autoPlayEl, audioRateEl, fixationEl, postResponseEl, paceEl, maxRunEl, maxFailsEl,
       thetaMinEl, thetaMaxEl, thetaStepEl, theta2MinEl, theta2MaxEl, theta2StepEl,
       algorithmEl, stopRuleEl, minItemsEl, maxItemsEl, targetSeEl, stopPserEl, quotaTolEl
     ].forEach(el => {
@@ -1841,6 +1869,8 @@
         }
         state.params.keymap = normalizeKeymap(overrides.keymap);
         state.params.auto_play_audio = !!overrides.auto_play_audio;
+        state.params.audio_rate = boundedNumberValue(
+          overrides.audio_rate, DEFAULTS.audio_rate, 0.75, 1.25, false);
         state.params.fixation_ms = boundedNumberValue(
           overrides.fixation_ms, DEFAULTS.fixation_ms, 0, 3000, true);
         state.params.post_response_ms = boundedNumberValue(
@@ -1891,6 +1921,7 @@
           timing_mode: state.params.timing,
           response_window_ms: responseWindowMs(),
           auto_play_audio: autoPlayAudio(),
+          audio_rate: audioPlaybackRate(),
           fixation_ms: fixationMs(),
           post_response_ms: postResponseMs(),
           pace: state.params.pace,
@@ -2098,6 +2129,13 @@
               '<option value="0"' + (!autoPlayAudio() ? ' selected' : '') + '>' +
                 escapeHtml(t('researchAutoplayOff')) + '</option>' +
             '</select></label>' +
+          '<label>' + researchLabel(t('researchAudioRateLabel'), t('researchAudioRateHelp')) +
+            '<input type="number" id="research-audio-rate" min="0.75" max="1.25" step="0.05" list="research-audio-rate-presets" value="' +
+              escapeHtml(audioPlaybackRate()) + '" />' +
+            '<datalist id="research-audio-rate-presets">' +
+              '<option value="0.9"></option><option value="1"></option><option value="1.1"></option>' +
+            '</datalist>' +
+            '<small>' + escapeHtml(t('researchAudioRateGuide')) + '</small></label>' +
           '<label><span>' + escapeHtml(t('researchFixationMsLabel')) + '</span>' +
             '<input type="number" id="research-fixation-ms" min="0" max="3000" step="50" value="' +
               escapeHtml(fixationMs()) + '" /></label>' +
@@ -2211,6 +2249,8 @@
           escapeHtml(timing) + '</strong></div>' +
         '<div><span>' + escapeHtml(t('researchAutoplay')) + '</span><strong>' +
           escapeHtml(autoPlayAudio() ? t('researchAutoplayOn') : t('researchAutoplayOff')) + '</strong></div>' +
+        '<div><span>' + escapeHtml(t('researchAudioRateLabel')) + '</span><strong>' +
+          escapeHtml(audioPlaybackRate().toFixed(2) + 'x') + '</strong></div>' +
         '<div><span>' + escapeHtml(t('researchFixation')) + '</span><strong>' +
           escapeHtml(fixationMs() + ' ms') + '</strong></div>' +
         '<div><span>' + escapeHtml(t('researchPostResponseMsLabel')) + '</span><strong>' +
@@ -2270,34 +2310,48 @@
         state.currentAudioDurationMs = Math.round(performance.now() - state.audioStart);
         logEvent('audio_play_end', {
           audio_path: path,
+          audio_playback_rate: audioPlaybackRate(),
           audio_duration_ms: state.currentAudioDurationMs
         });
         settle(resolve);
       };
       const onErr = () => {
-        logEvent('audio_play_error', { audio_path: path });
+        logEvent('audio_play_error', {
+          audio_path: path,
+          audio_playback_rate: audioPlaybackRate()
+        });
         settle(reject, new Error('audio element error'));
       };
       el.addEventListener('ended', onEnd);
       el.addEventListener('error', onErr);
       el.src = path;
+      el.defaultPlaybackRate = audioPlaybackRate();
+      el.playbackRate = audioPlaybackRate();
+      if ('preservesPitch' in el) el.preservesPitch = true;
       state.audioStart = performance.now();
       state.currentAudioStart = Date.now();
       state.currentAudioEnd = 0;
       state.currentAudioDurationMs = null;
-      logEvent('audio_play_start', { audio_path: path });
+      logEvent('audio_play_start', {
+        audio_path: path,
+        audio_playback_rate: audioPlaybackRate()
+      });
       const p = el.play();
       if (p && typeof p.then === 'function') {
         p.catch(err => {
           logEvent('audio_play_error', {
             audio_path: path,
+            audio_playback_rate: audioPlaybackRate(),
             error_message: err && err.message ? err.message : String(err || '')
           });
           settle(reject, err);
         });
       }
       timeoutId = window.setTimeout(() => {
-        logEvent('audio_play_timeout', { audio_path: path });
+        logEvent('audio_play_timeout', {
+          audio_path: path,
+          audio_playback_rate: audioPlaybackRate()
+        });
         settle(reject, new Error('audio playback timeout'));
       }, 20000);
     });
@@ -2533,6 +2587,7 @@
           keymap_id: state.responseMapping ? state.responseMapping.keymap_id : null,
           timed_out: false,
           response_window_ms: responseWindowMs(),
+          audio_playback_rate: audioPlaybackRate(),
           audio_failed: true
         });
         state.practice.currentIndex++;
@@ -2573,7 +2628,8 @@
       response_modality: d.response_modality || null,
       keymap_id: d.keymap_id || (state.responseMapping ? state.responseMapping.keymap_id : null),
       timed_out: timedOut,
-      response_window_ms: d.response_window_ms || responseWindowMs()
+      response_window_ms: d.response_window_ms || responseWindowMs(),
+      audio_playback_rate: audioPlaybackRate()
     });
     logEvent('practice_response_committed', {
       step: state.practice.currentIndex + 1,
@@ -2759,7 +2815,8 @@
         response_modality: null,
         keymap_id: state.responseMapping ? state.responseMapping.keymap_id : null,
         timed_out: false,
-        response_window_ms: responseWindowMs()
+        response_window_ms: responseWindowMs(),
+        audio_playback_rate: audioPlaybackRate()
       });
     }
   }
@@ -2782,7 +2839,8 @@
       response_modality: d.response_modality || null,
       keymap_id: d.keymap_id || (state.responseMapping ? state.responseMapping.keymap_id : null),
       timed_out: timedOut,
-      response_window_ms: d.response_window_ms || responseWindowMs()
+      response_window_ms: d.response_window_ms || responseWindowMs(),
+      audio_playback_rate: audioPlaybackRate()
     };
     if (response === null) {
       state.cat.markUsed(state.currentItemRef.index, extras);
@@ -3015,6 +3073,7 @@
       },
       presentation: {
         auto_play_audio: autoPlayAudio(),
+        audio_playback_rate: audioPlaybackRate(),
         fixation_ms: fixationMs(),
         post_response_ms: postResponseMs(),
         pace: state.params.pace,
@@ -3332,6 +3391,7 @@
       : 'model_selected_condition_order';
     state.session.max_condition_run = maxConditionRun();
     state.session.auto_play_audio = autoPlayAudio();
+    state.session.audio_playback_rate = audioPlaybackRate();
     state.session.fixation_ms = fixationMs();
     state.session.post_response_ms = postResponseMs();
     state.session.pace = state.params.pace;
@@ -3413,6 +3473,7 @@
         keymap_id:        row.keymap_id,
         timed_out:        !!row.timed_out,
         response_window_ms: row.response_window_ms,
+        audio_playback_rate: row.audio_playback_rate,
         audio_played_at:  row.audio_played_at,
         audio_ended_at:   row.audio_ended_at,
         audio_duration_ms: row.audio_duration_ms,
