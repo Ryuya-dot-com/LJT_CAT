@@ -561,6 +561,10 @@ footer a:hover { text-decoration: underline; }
   margin-top: 22px;
 }
 
+.mode-grid-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .mode-card {
   display: block;
   padding: 18px 20px;
@@ -570,6 +574,11 @@ footer a:hover { text-decoration: underline; }
   color: var(--color-text);
   text-decoration: none;
   box-shadow: var(--shadow-sm);
+}
+
+.mode-card.primary-mode {
+  border-color: #bfdbfe;
+  background: #eff6ff;
 }
 
 .mode-card:hover {
@@ -587,6 +596,12 @@ footer a:hover { text-decoration: underline; }
   display: block;
   color: var(--color-muted);
   font-size: 14px;
+}
+
+.mode-note {
+  margin: 18px 0 0;
+  color: var(--color-neutral);
+  font-size: 13px;
 }
 
 @media (max-width: 720px) {

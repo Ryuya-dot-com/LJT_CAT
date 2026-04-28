@@ -5,7 +5,7 @@
   <title>語彙意味判断テスト (LJT)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="assets/styles.css?v=20260428d" />
+  <link rel="stylesheet" href="assets/styles.css?v=20260428e" />
 </head>
 <body>
   <div class="container">
@@ -15,21 +15,22 @@
 
     <main>
       <section class="stage">
-        <h2>実施モードを選択</h2>
+        <h2>CAT版を開始</h2>
         <p>
-          標準運用は、分析レポートの推奨に合わせて2系統に分けています。
-          研究者の指示されたURLを使用してください。
+          現在の標準運用は、全160項目のアイテムバンクから適応的に出題する
+          Blueprint CATです。研究者から別のURLを指示された場合を除き、
+          下のCAT版を使用してください。
         </p>
-        <div class="mode-grid">
-          <a class="mode-card" href="fixed40/">
-            <strong>固定40問バランス短縮版</strong>
-            <span>単語重複なしの 20 Hit + 20 CR。即時運用向けの推奨版です。</span>
-          </a>
-          <a class="mode-card" href="adaptive/">
+        <div class="mode-grid mode-grid-single">
+          <a class="mode-card primary-mode" href="adaptive/">
             <strong>Blueprint CAT</strong>
             <span>全160項目から適応的に選び、40問フロアなしで精度に応じて停止します。</span>
           </a>
         </div>
+        <p class="mode-note">
+          固定40問版は比較・バックアップ用として残しています。必要な場合は研究者が
+          <code>/fixed40/</code> のURLを直接指定します。
+        </p>
       </section>
     </main>
 

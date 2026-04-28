@@ -10,15 +10,15 @@ Chrome / PC 前提の静的 HTML + vanilla JavaScript で動作する
 
 ## 標準運用
 
-レポート上で plain Mixed CAT は失敗ベースラインとして扱っているため、
-公開用の標準入口は次の2つに分けています。
+レポート上で plain Mixed CAT は失敗ベースラインとして扱い、固定40問版は
+比較・バックアップ用に残しています。公開用の標準入口は `/adaptive/` です。
 
 | URL | 用途 | 出題 |
 |---|---|---|
-| `/fixed40/` | 即時運用向け | 固定40問。単語重複なしの Hit 20問 + CR 20問を制約付きランダム順で出題 |
-| `/adaptive/` | 研究・検証向け | 全160項目の item bank から選ぶ blueprint CAT。40問の停止フロアは置かず、最大160問まで PSER / SE / max_items で停止 |
+| `/adaptive/` | 標準運用 | 全160項目の item bank から選ぶ blueprint CAT。40問の停止フロアは置かず、最大160問まで PSER / SE / max_items で停止 |
+| `/fixed40/` | 比較・バックアップ用 | 固定40問。単語重複なしの Hit 20問 + CR 20問を制約付きランダム順で出題。必要な場合のみ直接URLで指定 |
 
-ルート `/` は実施モード選択ページです。旧来の plain max-info Mixed CAT は
+ルート `/` はCAT版への入口です。固定40問版と旧来の plain max-info Mixed CAT は
 標準入口からは起動しません。
 
 ---
