@@ -13,7 +13,7 @@ window.LJT_APP_CONFIG = {
     maxItems: 160,
     maxHit: 80,
     maxCR: 80,
-    reportingMinPerCondition: 1
+    reportingMinPerCondition: 5
   },
   presentation: {
     maxConditionRun: 2,

@@ -22,7 +22,8 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '2.8.0';
+  const APP_VERSION = '2.8.1';
+  const ASSET_CACHE_VERSION = '20260428j';
   const UX_INSTRUCTION_VERSION = 'practice_instructions_20260428_refined';
   const APP_CONFIG = Object.assign({
     delivery: 'landing',
@@ -75,10 +76,10 @@
       noteKeys: '音声終了後、画面に表示される割り当てに従って <strong>F</strong> / <strong>J</strong> キーで回答します。',
       noteHeadphones: 'ヘッドホン / イヤホンの使用を強く推奨します。',
       participantInfo: '参加者情報',
-      participantInfoLead: '研究者から指定されたIDと氏名または識別名を入力してください。',
+      participantInfoLead: '研究者から指定されたIDと識別名を入力してください。',
       languageLabel: '表示言語',
       participantId: '参加者ID',
-      participantName: '氏名または識別名',
+      participantName: '識別名',
       consentStart: '説明に進む',
       disclaimer: '回答データと実施条件は、終了時にExcelファイルとしてこのコンピュータへ保存されます。保存されたファイルは研究者の指示にしたがって共有してください。',
       instructionsTitle: '説明',
@@ -137,6 +138,7 @@
       wrongFeedback: '✘ 不正解です<br><small>正しい答えは「<strong>{answer}</strong>」でした。</small>',
       savingStatus: '結果を保存中...',
       savedStatus: '結果ファイルを保存しました。',
+      savedJsonStatus: 'Excel保存に失敗したため、JSON形式で保存しました。画面に表示されたファイル名を確認してください。',
       saveFailed: '⚠ 結果ファイルの保存に失敗しました。ページを更新して再試行してください。',
       xlsxLoadTitle: 'Excel 書き出しライブラリの読み込みに失敗しました',
       xlsxLoadBody: 'ネットワーク接続を確認してページを再読み込みしてください。再試行しても解決しない場合は研究者にご連絡ください。',
@@ -251,10 +253,10 @@
       noteKeys: 'After the audio ends, respond with the <strong>F</strong> / <strong>J</strong> keys according to the mapping shown on screen.',
       noteHeadphones: 'Headphones or earphones are strongly recommended.',
       participantInfo: 'Participant Information',
-      participantInfoLead: 'Enter the participant ID and name or identifier specified by the researcher.',
+      participantInfoLead: 'Enter the participant ID and identifier specified by the researcher.',
       languageLabel: 'Display language',
       participantId: 'Participant ID',
-      participantName: 'Name or identifier',
+      participantName: 'Identifier',
       consentStart: 'Continue to instructions',
       disclaimer: 'At the end of the test, response data and administration settings will be saved to this computer as an Excel file. Please share the saved file according to the researcher’s instructions.',
       instructionsTitle: 'Instructions',
@@ -313,6 +315,7 @@
       wrongFeedback: '✘ Incorrect<br><small>The correct answer was “<strong>{answer}</strong>”.</small>',
       savingStatus: 'Saving result file...',
       savedStatus: 'The result file has been saved.',
+      savedJsonStatus: 'Excel export failed, so the result was saved as JSON. Check the filename shown on this screen.',
       saveFailed: '⚠ Failed to save the result file. Please reload the page and try again.',
       xlsxLoadTitle: 'Failed to load the Excel export library',
       xlsxLoadBody: 'Please check the network connection and reload the page. If the problem persists, contact the researcher.',
@@ -470,6 +473,13 @@
   function assetPath (path) {
     const base = (APP_CONFIG.assetBase || '.').replace(/\/$/, '');
     return base === '.' ? path : base + '/' + path.replace(/^\//, '');
+  }
+
+  function cacheBustedAssetPath (path) {
+    const resolved = assetPath(path);
+    if (!/\.(json|wav)$/i.test(path)) return resolved;
+    return resolved + (resolved.includes('?') ? '&' : '?') +
+      'v=' + encodeURIComponent(ASSET_CACHE_VERSION);
   }
 
   function boundedNumberParam (params, name, def, min, max, integer) {
@@ -763,7 +773,11 @@
         adaptiveBounds.cap
       );
     }
-    state.session.url_params_raw = u.search || '';
+    try {
+      state.session.url_params_raw = new URL(buildProtocolURL(state.researchMode)).search || '';
+    } catch (err) {
+      state.session.url_params_raw = '';
+    }
   }
 
   function showStage (id) {
@@ -931,8 +945,11 @@
   function deliveryPathname (pathname, delivery) {
     const target = normalizeDelivery(delivery);
     const replacement = '/' + target + '/';
-    if (/\/(fixed40|adaptive)\/?$/.test(pathname)) {
-      return pathname.replace(/\/(fixed40|adaptive)\/?$/, replacement);
+    if (/\/(fixed40|adaptive)(\/index\.html)?\/?$/.test(pathname)) {
+      return pathname.replace(/\/(fixed40|adaptive)(\/index\.html)?\/?$/, replacement);
+    }
+    if (/\/index\.html\/?$/.test(pathname)) {
+      return pathname.replace(/\/index\.html\/?$/, replacement);
     }
     const withSlash = pathname.endsWith('/') ? pathname : pathname + '/';
     return withSlash + target + '/';
@@ -941,6 +958,8 @@
   function buildProtocolURL (keepResearch, overrides) {
     const opts = overrides || {};
     const u = new URL(window.location.href);
+    u.search = '';
+    u.hash = '';
     const delivery = normalizeDelivery(opts.delivery || state.delivery);
     const mode = normalizeTiming(opts.timing || state.params.timing);
     const ms = boundedNumberValue(
@@ -1012,6 +1031,7 @@
       theta2Max = DEFAULTS.theta2_max;
     }
     u.pathname = deliveryPathname(u.pathname, delivery);
+    if (state.labCode) u.searchParams.set('lab', state.labCode);
     u.searchParams.set('lang', state.lang);
     u.searchParams.set('timing', mode);
     u.searchParams.set('auto_play_audio', boolToParam(autoPlay));
@@ -1360,7 +1380,7 @@
 
   // ---- Data loading ----
   async function loadJSON (path) {
-    const r = await fetch(assetPath(path));
+    const r = await fetch(cacheBustedAssetPath(path), { cache: 'no-cache' });
     if (!r.ok) throw new Error('Failed to fetch ' + path + ' (' + r.status + ')');
     return r.json();
   }
@@ -2229,22 +2249,34 @@
   function playAudio (path) {
     return new Promise((resolve, reject) => {
       const el = $('audio-player');
+      let settled = false;
+      let timeoutId = null;
+      const cleanup = () => {
+        el.removeEventListener('ended', onEnd);
+        el.removeEventListener('error', onErr);
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+      };
+      const settle = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        fn(value);
+      };
       const onEnd = () => {
         state.currentAudioEnd = Date.now();
         state.currentAudioDurationMs = Math.round(performance.now() - state.audioStart);
-        el.removeEventListener('ended', onEnd);
-        el.removeEventListener('error', onErr);
         logEvent('audio_play_end', {
           audio_path: path,
           audio_duration_ms: state.currentAudioDurationMs
         });
-        resolve();
+        settle(resolve);
       };
       const onErr = () => {
-        el.removeEventListener('ended', onEnd);
-        el.removeEventListener('error', onErr);
         logEvent('audio_play_error', { audio_path: path });
-        reject(new Error('audio element error'));
+        settle(reject, new Error('audio element error'));
       };
       el.addEventListener('ended', onEnd);
       el.addEventListener('error', onErr);
@@ -2257,15 +2289,17 @@
       const p = el.play();
       if (p && typeof p.then === 'function') {
         p.catch(err => {
-          el.removeEventListener('ended', onEnd);
-          el.removeEventListener('error', onErr);
           logEvent('audio_play_error', {
             audio_path: path,
             error_message: err && err.message ? err.message : String(err || '')
           });
-          reject(err);
+          settle(reject, err);
         });
       }
+      timeoutId = window.setTimeout(() => {
+        logEvent('audio_play_timeout', { audio_path: path });
+        settle(reject, new Error('audio playback timeout'));
+      }, 20000);
     });
   }
 
@@ -2485,7 +2519,7 @@
     };
     $('trial-counter').textContent = t('practiceCounter', { n: idx + 1 });
 
-    presentStimulus(assetPath('audio/practice/' + item.stimuli), item.targetword, (signal) => {
+    presentStimulus(cacheBustedAssetPath('audio/practice/' + item.stimuli), item.targetword, (signal) => {
       if (signal === null) {
         // Audio failed past retry budget during practice — just log an empty
         // practice row and advance; practice is formative, no CAT state here.
@@ -2682,7 +2716,7 @@
       se_before: sel.se
     });
 
-    presentStimulus(assetPath('audio/main/' + it.stimuli), it.targetword, (skipSignal) => {
+    presentStimulus(cacheBustedAssetPath('audio/main/' + it.stimuli), it.targetword, (skipSignal) => {
       if (skipSignal === null) {
         // Skipped via fail path: record missing response and move on. The
         // presentStimulus `commit` guard has already disabled the skip button
@@ -3287,14 +3321,14 @@
       : '';
     state.session.adaptive_candidate_set = adaptiveSource ? adaptiveSource.candidateSet : '';
     state.session.item_selection_model = state.delivery === 'adaptive'
-      ? 'full 160-item per-condition 1D 2PL blueprint CAT (mod_hit / mod_cr)'
+      ? 'full 160-item per-condition 1D 2PL ' + state.algorithm + ' CAT (mod_hit / mod_cr)'
       : state.delivery === 'fixed40'
       ? 'per-condition 1D 2PL disjoint fixed form (mod_hit / mod_cr)'
       : 'legacy combined 1F / 2F research mode';
     state.session.presentation_order_policy = state.delivery === 'fixed40'
       ? 'balanced_random_condition_order'
       : state.delivery === 'adaptive'
-      ? 'blueprint_random_tie_condition_order_full160'
+      ? state.algorithm + '_random_tie_condition_order_full160'
       : 'model_selected_condition_order';
     state.session.max_condition_run = maxConditionRun();
     state.session.auto_play_audio = autoPlayAudio();
@@ -3325,7 +3359,7 @@
     state.session.backbone_model = state.delivery === 'fixed40'
       ? 'fixed40_disjoint_balanced_short_form'
       : (state.delivery === 'adaptive'
-          ? 'full160_per_condition_1d_2pl_blueprint'
+          ? 'full160_per_condition_1d_2pl_' + state.algorithm
           : (state.mode === '1F' ? 'combined_1f_2pl' : 'compensatory_2f_mirt'));
     state.session.min_answered_required = state.params.min_items;
     state.session.min_answered_per_condition_required = MIN_PER_CONDITION;
@@ -3350,13 +3384,10 @@
     showStage('stage-result');
 
     // Build Excel payload
-    const safeName = (state.participant.name || 'anonymous')
-      .replace(/[^A-Za-z0-9_\-\u3040-\u30ff\u4e00-\u9faf]/g, '_').slice(0, 32);
     const safeId = (state.participant.id || 'na')
       .replace(/[^A-Za-z0-9_\-]/g, '_').slice(0, 32);
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const modeForFile = state.delivery === 'adaptive' ? state.algorithm : state.delivery;
-    const filename = 'LJT_CAT_' + modeForFile + '_' + safeName + '_' + safeId + '_' + ts + '.xlsx';
+    const filename = 'LJT_result_' + safeId + '_' + ts + '.xlsx';
     state.session.result_filename = filename;
     const fnEl = $('filename-display');
     if (fnEl) fnEl.textContent = t('resultFilename', { filename: filename });
@@ -3440,10 +3471,16 @@
     };
 
     // Trigger download
-    const ok = window.LJTExcel.export(filename, payload);
+    const exportResult = window.LJTExcel.export(filename, payload);
+    const ok = !!(exportResult && (exportResult === true || exportResult.ok));
+    const actualFilename = exportResult && exportResult.filename ? exportResult.filename : filename;
+    const usedFallback = !!(exportResult && exportResult.fallback);
+    state.session.result_filename = actualFilename;
+    payload.session.result_filename = actualFilename;
+    if (fnEl) fnEl.textContent = t('resultFilename', { filename: actualFilename });
     const ds = $('download-status');
     if (ok) {
-      ds.textContent = t('savedStatus');
+      ds.textContent = usedFallback ? t('savedJsonStatus') : t('savedStatus');
       ds.classList.add('done');
       $('btn-download-again').classList.remove('hidden');
       $('btn-download-again').onclick = () => window.LJTExcel.export(filename, payload);

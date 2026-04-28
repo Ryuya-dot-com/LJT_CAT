@@ -5,10 +5,15 @@
   <title>語彙意味判断テスト (LJT)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="assets/styles.css?v=20260428i" />
+  <link rel="stylesheet" href="assets/styles.css?v=20260428j" />
 </head>
 <body>
-  <div class="container">
+  <div id="browser-warning" class="hidden">
+    <p>このテストは <strong>Google Chrome</strong> のブラウザでのみご利用いただけます。<br />
+       PC の Chrome でこのページを開き直してください。</p>
+  </div>
+
+  <div id="landing-app" class="container">
     <header>
       <h1>語彙意味判断テスト</h1>
     </header>
@@ -26,7 +31,7 @@
           <li>本試行では正誤フィードバックやスコアは表示されません。</li>
           <li>結果は終了時にExcelファイルとして保存されます。</li>
         </ul>
-        <a class="primary-btn start-link" href="adaptive/">テストを開始する</a>
+        <a id="start-link" class="primary-btn start-link" href="adaptive/">テストを開始する</a>
         <p class="mode-note">
           研究者から別のURLを指定されている場合は、そのURLを使用してください。
         </p>
@@ -37,5 +42,27 @@
       <small>語彙意味判断テスト</small>
     </footer>
   </div>
+  <script>
+    (function () {
+      function isSupportedBrowser () {
+        if (!('AudioContext' in window || 'webkitAudioContext' in window)) return false;
+        if (!(window.crypto && window.crypto.getRandomValues)) return false;
+        if (typeof Audio === 'undefined') return false;
+        var ua = navigator.userAgent || '';
+        if (/iPad|iPhone|iPod|Android/.test(ua)) return false;
+        if (/CriOS\//.test(ua)) return false;
+        if (/Edg\//.test(ua) || /OPR\//.test(ua)) return false;
+        return /Chrome\//.test(ua);
+      }
+      var link = document.getElementById('start-link');
+      if (link) {
+        link.href = 'adaptive/' + window.location.search + window.location.hash;
+      }
+      if (!isSupportedBrowser()) {
+        document.getElementById('browser-warning').classList.remove('hidden');
+        document.getElementById('landing-app').classList.add('hidden');
+      }
+    })();
+  </script>
 </body>
 </html>

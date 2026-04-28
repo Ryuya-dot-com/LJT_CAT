@@ -27,6 +27,61 @@
     return rows;
   }
 
+  function stoppingRuleDescription (session) {
+    const rule = session.stop_rule || '';
+    const minText = 'min n = ' + session.min_items + ', max n = ' + session.max_items;
+    if (rule === 'blueprint_pser') {
+      return 'Blueprint PSER: ' + minText +
+        '; stop when predicted joint-SE reduction < stop_pser (' +
+        session.stop_pser + ')';
+    }
+    if (rule === 'pser') {
+      return 'PSER: ' + minText +
+        '; stop when predicted SE reduction < stop_pser (' +
+        session.stop_pser + ')';
+    }
+    if (rule === 'max_items') {
+      return 'Fixed length within adaptive engine: stop only at max n = ' +
+        session.max_items;
+    }
+    if (rule === 'se') {
+      return 'SE < ' + session.target_se + ', ' + minText +
+        (session.mode === '2F_research'
+          ? ' (joint SE = sqrt(se1^2 + se2^2))'
+          : '');
+    }
+    return rule || '';
+  }
+
+  function scoringBackboneDescription (session) {
+    if (session.mode === 'fixed40') {
+      return 'Fixed form: validated no-overlap 20 Hit + 20 CR form selected from mod_hit / mod_cr per-condition 1D 2PL; theta_hit/theta_cr: mod_hit / mod_cr; 2F output = post-hoc confirmatory MIRT';
+    }
+    if (session.mode === '1F') {
+      const algorithm = session.algorithm || 'blueprint';
+      const candidateSet = session.adaptive_candidate_set || session.selected_form_adaptive || 'full160_item_bank';
+      return 'Adaptive selection: ' + algorithm + ' CAT over ' + candidateSet +
+        ' using mod_hit / mod_cr per-condition 1D 2PL information; targetword overlap follows the delivery config; theta_hit/theta_cr: mod_hit / mod_cr; 2F output = post-hoc confirmatory MIRT';
+    }
+    return 'Item selection: 2F MIRT compensatory; theta_hit/theta_cr: mod_hit / mod_cr; 2F output = post-hoc confirmatory MIRT';
+  }
+
+  function downloadJSONFallback (filename, payload) {
+    const jsonName = filename.replace(/\.(xlsx|json)$/i, '') + '.json';
+    if (payload && payload.session) payload.session.result_filename = jsonName;
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json'
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = jsonName;
+    document.body.appendChild(a);
+    a.click();
+    URL.revokeObjectURL(a.href);
+    a.remove();
+    return { ok: true, filename: jsonName, format: 'json', fallback: true };
+  }
+
   function exportToExcel (filename, payload) {
     if (typeof XLSX === 'undefined') {
       console.error('SheetJS (XLSX) not loaded.');
@@ -207,17 +262,7 @@
           ? thetaGridLabel
           : theta2GridLabel },
       { key: 'stopping_rule',
-        value: payload.session.stop_rule === 'blueprint_pser'
-          ? 'Blueprint PSER: no stopping before min n = ' +
-            payload.session.min_items +
-            '; stop when predicted joint-SE reduction < stop_pser; hard cap n = ' +
-            payload.session.max_items
-          : 'SE < ' + payload.session.target_se +
-            ', min n = ' + payload.session.min_items +
-            ', max n = ' + payload.session.max_items +
-            (payload.session.mode === '2F_research'
-               ? ' (joint SE = sqrt(se1^2 + se2^2))'
-               : '') },
+        value: stoppingRuleDescription(payload.session) },
       { key: 'max_play_fails_per_item',
         value: payload.session.max_play_fails },
       { key: 'min_answered_required',
@@ -283,11 +328,7 @@
       { key: 'response_key_inappropriate',
         value: payload.session.response_key_inappropriate || '' },
       { key: 'scoring_backbone',
-        value: payload.session.mode === 'fixed40'
-          ? 'Fixed form: validated no-overlap 20 Hit + 20 CR form selected from mod_hit / mod_cr per-condition 1D 2PL; theta_hit/theta_cr: mod_hit / mod_cr; 2F output = post-hoc confirmatory MIRT'
-          : payload.session.mode === '1F'
-          ? 'Adaptive selection: no-overlap blueprint CAT using mod_hit / mod_cr per-condition 1D 2PL information; theta_hit/theta_cr: mod_hit / mod_cr; 2F output = post-hoc confirmatory MIRT'
-          : 'Item selection: 2F MIRT compensatory; theta_hit/theta_cr: mod_hit / mod_cr; 2F output = post-hoc confirmatory MIRT' },
+        value: scoringBackboneDescription(payload.session) },
       { key: 'toeic_regression',
         value: 'Per-condition: TOEIC ~ intercept + slope_hit * theta_hit + slope_cr * theta_cr' },
       { key: 'toeic_intercept',   value: reg.intercept    },
@@ -326,25 +367,14 @@
 
     try {
       XLSX.writeFile(wb, filename, { bookType: 'xlsx', compression: true });
-      return true;
+      return { ok: true, filename: filename, format: 'xlsx', fallback: false };
     } catch (err) {
       console.error('Excel export failed.', err);
       try {
-        const jsonName = filename.replace(/\.xlsx$/i, '.json');
-        const blob = new Blob([JSON.stringify(payload, null, 2)], {
-          type: 'application/json'
-        });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = jsonName;
-        document.body.appendChild(a);
-        a.click();
-        URL.revokeObjectURL(a.href);
-        a.remove();
-        return true;
+        return downloadJSONFallback(filename, payload);
       } catch (fallbackErr) {
         console.error('JSON fallback export failed.', fallbackErr);
-        return false;
+        return { ok: false, filename: filename, format: 'xlsx', fallback: false };
       }
     }
   }
