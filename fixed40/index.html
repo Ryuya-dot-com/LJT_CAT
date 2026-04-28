@@ -2,10 +2,10 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>語彙意味判断テスト (固定40問)</title>
+  <title>語彙意味判断テスト</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="../assets/styles.css?v=20260428g" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260428h" />
 </head>
 <body>
   <div id="browser-warning" class="hidden">
@@ -16,7 +16,7 @@
   <div id="app" class="container">
     <header>
       <h1 data-i18n="appTitle">語彙意味判断テスト</h1>
-      <p class="subtitle" data-i18n="subtitleFixed">固定40問バランス短縮版</p>
+      <p class="subtitle" data-i18n="subtitleFixed">リスニング形式</p>
     </header>
 
     <main id="stage-container">
@@ -53,7 +53,7 @@
             <span><span data-i18n="participantName">お名前</span> <span class="required">*</span></span>
             <input type="text" id="input-name" required maxlength="64" autocomplete="off" />
           </label>
-          <button type="submit" class="primary-btn" data-i18n="consentStart">同意して開始</button>
+          <button type="submit" class="primary-btn" data-i18n="consentStart">説明に進む</button>
         </form>
         <p class="disclaimer" data-i18n="disclaimer">
           回答データは終了時にあなたのコンピュータに保存されます。
@@ -62,7 +62,7 @@
       </section>
 
       <section id="stage-instructions" class="stage hidden">
-        <h2 data-i18n="instructionsTitle">教示</h2>
+        <h2 data-i18n="instructionsTitle">説明</h2>
         <p data-i18n="instructionsLead">これから4問の練習を行います。各問題では:</p>
         <div class="instruction-callout">
           <h3 data-i18n="practiceGoalTitle">練習で確認すること</h3>
@@ -145,11 +145,11 @@
     </footer>
   </div>
 
-  <script src="../lib/xlsx.full.min.js?v=20260428g"></script>
-  <script src="config.js?v=20260428g"></script>
-  <script src="../js/cat_1f.js?v=20260428g"></script>
-  <script src="../js/cat_2f.js?v=20260428g"></script>
-  <script src="../js/xlsx_export.js?v=20260428g"></script>
-  <script src="../js/cat_app.js?v=20260428g"></script>
+  <script src="../lib/xlsx.full.min.js?v=20260428h"></script>
+  <script src="config.js?v=20260428h"></script>
+  <script src="../js/cat_1f.js?v=20260428h"></script>
+  <script src="../js/cat_2f.js?v=20260428h"></script>
+  <script src="../js/xlsx_export.js?v=20260428h"></script>
+  <script src="../js/cat_app.js?v=20260428h"></script>
 </body>
 </html>
