@@ -71,8 +71,8 @@ Chrome / PC 前提の静的 HTML + vanilla JavaScript で動作する
 
 - 参加者画面では、リスニング課題としての妥当性を優先し、判断対象語のスペル、
   `theta_hit` / `theta_cr`、SE、TOEIC 推定値、項目パラメータを表示しない
-- 練習インストラクションは `instruction_version = practice_instructions_20260428` として管理する
-  (`app_version = 2.7.0`)
+- 練習インストラクションは `instruction_version = practice_instructions_20260428_refined` として管理する
+  (`app_version = 2.8.0`)
 - 練習は採点対象外だが、本試行前の操作確認として、練習後に
   `n_answered`、`n_correct`、正答率、タイムアウト数、音声再生失敗数を画面表示する
 - 本試行終了後の画面では、保存された結果ファイル名だけを表示し、スコアや推定値は表示しない
@@ -85,7 +85,7 @@ Chrome / PC 前提の静的 HTML + vanilla JavaScript で動作する
 
 ```text
 LJT_CAT/
-├── index.html                  # モード選択ページ
+├── index.html                  # 標準CAT版への入口
 ├── fixed40/
 │   ├── index.html              # 固定40問バランス短縮版
 │   └── config.js
@@ -120,12 +120,10 @@ https://ryuya-dot-com.github.io/LJT_CAT/
 
 参加者・実験者に配布するURL:
 
-- 固定40問バランス短縮版:
-  `https://ryuya-dot-com.github.io/LJT_CAT/fixed40/`
-- 固定40問 + ラボコード:
-  `https://ryuya-dot-com.github.io/LJT_CAT/fixed40/?lab=UCL_Komuro`
-- Adaptive デフォルト (Blueprint + PSER):
+- 標準CAT版 (Blueprint + PSER):
   `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/`
+- 標準CAT版 + ラボコード:
+  `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?lab=UCL_Komuro`
 - Quota CAT:
   `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?algorithm=quota`
 - Adaptive の最大出題数を制限:
@@ -133,13 +131,15 @@ https://ryuya-dot-com.github.io/LJT_CAT/
 - 精度停止:
   `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=se&target_se=0.30`
 - Untimed 実施:
-  `https://ryuya-dot-com.github.io/LJT_CAT/fixed40/?timing=untimed`
+  `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?timing=untimed`
 - Timed 1500 ms 実施:
-  `https://ryuya-dot-com.github.io/LJT_CAT/fixed40/?timing=timed&response_window_ms=1500`
+  `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?timing=timed&response_window_ms=1500`
 - 英語UI:
-  `https://ryuya-dot-com.github.io/LJT_CAT/fixed40/?lang=en`
+  `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?lang=en`
 - 研究用確認パネル:
   `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?research=1`
+- 固定40問バランス短縮版 (比較・バックアップ用):
+  `https://ryuya-dot-com.github.io/LJT_CAT/fixed40/`
 
 ---
 

@@ -22,8 +22,8 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '2.7.0';
-  const UX_INSTRUCTION_VERSION = 'practice_instructions_20260428';
+  const APP_VERSION = '2.8.0';
+  const UX_INSTRUCTION_VERSION = 'practice_instructions_20260428_refined';
   const APP_CONFIG = Object.assign({
     delivery: 'landing',
     assetBase: '.',
@@ -57,20 +57,23 @@
       subtitleAdaptive: 'Blueprint CAT',
       browserWarning: 'このテストは <strong>Google Chrome</strong> のブラウザでのみご利用いただけます。<br />PC の Chrome でこのページを開き直してください。',
       welcomeTitle: 'ようこそ',
-      welcomeBody: 'このテストでは、英語の短い文を聞いていただきます。それぞれの文には<strong>1つの英単語</strong>が含まれています。文の中でその英単語の使われ方が<strong>意味的に適切か、不適切か</strong>を判断してください。',
+      welcomeBody: 'このテストでは、英語の短い文を聞いていただきます。それぞれの文には<strong>1つの英単語</strong>が含まれています。判断対象語のスペルは表示されません。文の中でその英単語の使われ方が<strong>意味的に適切か、不適切か</strong>を、音声をもとに判断してください。',
       noteAutoplay: '各問題では、中央の「+」のあと音声が<strong>自動で1回</strong>再生されます。',
       noteManualPlay: '各問題では、中央の「+」のあと表示される<strong>音声再生ボタン</strong>を押すと音声が1回再生されます。',
       notePractice: '練習が<strong>4問</strong>あり、そのあと本試行に進みます。',
       noteFixedLength: '本試行は<strong>40問</strong>です。',
-      noteAdaptiveLength: '本試行の問題数は回答状況に応じて変わります。',
-      noteKeys: '音声終了後、キーボードの <strong>F</strong> / <strong>J</strong> で回答します。',
+      noteAdaptiveLength: 'CAT版では、本試行の問題数は回答状況に応じて変わります。',
+      noteNoSpelling: '判断対象語のスペルは画面に表示されません。',
+      noteNoScoreShown: '本試行では正誤フィードバックやスコアは表示されません。',
+      noteKeys: '音声終了後、画面に表示される割り当てに従って <strong>F</strong> / <strong>J</strong> キーで回答します。',
       noteHeadphones: 'ヘッドホン / イヤホンの使用を強く推奨します。',
       participantInfo: '参加者情報',
+      participantInfoLead: '研究者から指定されたIDと氏名または識別名を入力してください。',
       languageLabel: '表示言語',
       participantId: '参加者ID',
-      participantName: 'お名前',
-      consentStart: '同意して開始',
-      disclaimer: '回答データは終了時にあなたのコンピュータに保存されます。ダウンロードされたファイルは研究者の指示にしたがって共有してください。',
+      participantName: '氏名または識別名',
+      consentStart: '教示へ進む',
+      disclaimer: '回答データと実施条件は、終了時にExcelファイルとしてこのコンピュータへ保存されます。保存されたファイルは研究者の指示にしたがって共有してください。',
       instructionsTitle: '教示',
       instructionsLead: 'まず4問の練習を行います。練習では、音量、キー割り当て、判断方法を確認してください。',
       practiceGoalTitle: '練習で確認すること',
@@ -87,14 +90,14 @@
       startPractice: '練習を開始する',
       transitionTitle: '練習は以上です',
       transitionBody: 'これから本試行に入ります。本試行では<strong>フィードバックは表示されません</strong>。音声は<strong>1回のみ</strong>再生されます。準備ができたら開始してください。',
-      transitionReminder: '音量、キー割り当て、判断方法に問題がなければ本試行を開始してください。',
+      transitionReminder: '音量、キー割り当て、判断方法に問題がなければ本試行を開始してください。不安がある場合は本試行に進む前に研究者へ知らせてください。',
       practiceSummary: '練習結果: {correct} / {total} 正解',
       practiceSummaryDetails: '時間切れ {timeouts} 問、音声失敗 {audioFailed} 問',
       startMain: '本試行を開始する',
       resultTitle: 'テスト終了',
       resultThanks: 'ご協力ありがとうございました。',
       downloadAgain: 'もう一度ダウンロードする',
-      endNote: '結果ファイルがダウンロードフォルダに保存されました。研究者の指示にしたがって共有してください。',
+      endNote: '結果ファイルがダウンロードフォルダに保存されました。画面に表示されたファイル名を確認し、研究者の指示にしたがって共有してください。',
       resultFilename: '保存ファイル: {filename}',
       appropriate: '適切',
       inappropriate: '不適切',
@@ -118,8 +121,8 @@
       clickPlay: '「音声を再生」を押してください。',
       practiceLabel: '練習',
       mainLabel: '本試行',
-      questionCounter: '{n}問目',
-      practiceCounter: '{n} / 4',
+      questionCounter: '本試行 {n} 問目',
+      practiceCounter: '練習 {n} / 4',
       timeoutFeedback: '時間切れです<br><small>正しい答えは「<strong>{answer}</strong>」でした。次の問題に進みます…</small>',
       correctFeedback: '✔ 正解です! <br><small>次の問題に進みます…</small>',
       wrongFeedback: '✘ 不正解です<br><small>正しい答えは「<strong>{answer}</strong>」でした。次の問題に進みます…</small>',
@@ -211,20 +214,23 @@
       subtitleAdaptive: 'Blueprint CAT',
       browserWarning: 'This test is available only in <strong>Google Chrome</strong> on a desktop or laptop computer.<br />Please reopen this page in Chrome on a PC.',
       welcomeTitle: 'Welcome',
-      welcomeBody: 'In this test, you will hear short English sentences. Each sentence contains <strong>one English word</strong>. Decide whether that word is used in a <strong>semantically appropriate or inappropriate</strong> way in the sentence.',
+      welcomeBody: 'In this test, you will hear short English sentences. Each sentence contains <strong>one English word</strong>. The spelling of the word to judge is not shown. Use the audio to decide whether that word is used in a <strong>semantically appropriate or inappropriate</strong> way in the sentence.',
       noteAutoplay: 'On each trial, audio plays <strong>automatically once</strong> after the central “+”.',
       noteManualPlay: 'On each trial, press the <strong>play-audio button</strong> shown after the central “+”; the audio plays once.',
       notePractice: 'There are <strong>4 practice trials</strong>, followed by the main test.',
       noteFixedLength: 'The main test has <strong>40 trials</strong>.',
-      noteAdaptiveLength: 'The number of main-test trials depends on your responses.',
-      noteKeys: 'After the audio ends, respond with the <strong>F</strong> / <strong>J</strong> keys.',
+      noteAdaptiveLength: 'In the CAT version, the number of main-test trials depends on your responses.',
+      noteNoSpelling: 'The spelling of the word to judge is not shown on screen.',
+      noteNoScoreShown: 'No correctness feedback or score is shown during the main test.',
+      noteKeys: 'After the audio ends, respond with the <strong>F</strong> / <strong>J</strong> keys according to the mapping shown on screen.',
       noteHeadphones: 'Headphones or earphones are strongly recommended.',
       participantInfo: 'Participant Information',
+      participantInfoLead: 'Enter the participant ID and name or identifier specified by the researcher.',
       languageLabel: 'Display language',
       participantId: 'Participant ID',
-      participantName: 'Name',
-      consentStart: 'Agree and start',
-      disclaimer: 'At the end of the test, your response data will be saved to this computer. Please share the downloaded file according to the researcher’s instructions.',
+      participantName: 'Name or identifier',
+      consentStart: 'Continue to instructions',
+      disclaimer: 'At the end of the test, response data and administration settings will be saved to this computer as an Excel file. Please share the saved file according to the researcher’s instructions.',
       instructionsTitle: 'Instructions',
       instructionsLead: 'You will first complete 4 practice trials. Use them to check the audio volume, key mapping, and decision rule.',
       practiceGoalTitle: 'What to check in practice',
@@ -241,14 +247,14 @@
       startPractice: 'Start practice',
       transitionTitle: 'Practice complete',
       transitionBody: 'You will now start the main test. <strong>No feedback is shown</strong> during the main test. Audio is played <strong>only once</strong>. Start when you are ready.',
-      transitionReminder: 'Start the main test when the audio volume, key mapping, and decision rule are clear.',
+      transitionReminder: 'Start the main test when the audio volume, key mapping, and decision rule are clear. If anything is unclear, tell the researcher before starting.',
       practiceSummary: 'Practice result: {correct} / {total} correct',
       practiceSummaryDetails: '{timeouts} timed out, {audioFailed} audio failed',
       startMain: 'Start main test',
       resultTitle: 'Test complete',
       resultThanks: 'Thank you for your participation.',
       downloadAgain: 'Download again',
-      endNote: 'The result file has been saved to the Downloads folder. Please share it according to the researcher’s instructions.',
+      endNote: 'The result file has been saved to the Downloads folder. Check the filename shown on screen and share it according to the researcher’s instructions.',
       resultFilename: 'Saved file: {filename}',
       appropriate: 'Appropriate',
       inappropriate: 'Inappropriate',
@@ -272,8 +278,8 @@
       clickPlay: 'Press “Play audio”.',
       practiceLabel: 'Practice',
       mainLabel: 'Main test',
-      questionCounter: 'Trial {n}',
-      practiceCounter: '{n} / 4',
+      questionCounter: 'Main test trial {n}',
+      practiceCounter: 'Practice {n} / 4',
       timeoutFeedback: 'Time out<br><small>The correct answer was “<strong>{answer}</strong>”. Moving to the next trial…</small>',
       correctFeedback: '✔ Correct! <br><small>Moving to the next trial…</small>',
       wrongFeedback: '✘ Incorrect<br><small>The correct answer was “<strong>{answer}</strong>”. Moving to the next trial…</small>',
@@ -658,7 +664,16 @@
   function showStage (id) {
     document.querySelectorAll('.stage').forEach(s => s.classList.add('hidden'));
     const el = $(id);
-    if (el) el.classList.remove('hidden');
+    if (el) {
+      el.classList.remove('hidden');
+      if (id !== 'stage-trial') {
+        const heading = el.querySelector('h2');
+        if (heading) {
+          heading.setAttribute('tabindex', '-1');
+          window.setTimeout(() => heading.focus({ preventScroll: true }), 0);
+        }
+      }
+    }
     logEvent('stage_change', { stage_id: id });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }

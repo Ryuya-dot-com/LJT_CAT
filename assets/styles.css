@@ -74,6 +74,22 @@ h2 {
   margin-top: 0;
 }
 
+.stage-lead {
+  margin: 0 0 18px;
+  color: var(--color-text);
+}
+
+.route-status {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: var(--color-primary-dark);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 h3 {
   font-size: 18px;
   margin-top: 28px;
@@ -103,6 +119,14 @@ h3 {
 }
 
 .note-list li { margin: 6px 0; }
+
+.compact-list {
+  margin-bottom: 22px;
+}
+
+.compact-list li {
+  margin: 4px 0;
+}
 
 .instruction-callout {
   margin: 16px 0 20px;
@@ -274,6 +298,12 @@ form label {
 form label span { display: block; font-weight: 600; margin-bottom: 4px; }
 form label small { display: block; color: var(--color-muted); margin-top: 2px; font-size: 13px; }
 
+.form-note {
+  margin: -2px 0 12px;
+  color: var(--color-neutral);
+  font-size: 14px;
+}
+
 input[type="text"], select {
   width: 100%;
   padding: 10px 12px;
@@ -322,6 +352,14 @@ input[type="text"]:focus, select:focus {
   border: 1px solid var(--color-primary);
 }
 .secondary-btn:hover { background: #eff6ff; }
+
+.start-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 220px;
+  text-decoration: none;
+}
 
 .disclaimer {
   margin-top: 32px;
