@@ -164,12 +164,14 @@ https://ryuya-dot-com.github.io/LJT_CAT/
 | `pace` | `auto`, `self`。`self` では回答後に Space キーまたはボタンで次へ進む |
 | `self_paced` | `1` のとき `pace=self` と同じ。後方互換用 |
 | `max_condition_run` | Hit または CR の最大連続提示数。デフォルトは 2 |
+| `theta_min`, `theta_max`, `theta_step` | 主スコアとCAT項目選択に使う1D EAP θグリッド。デフォルトは `-6`, `6`, `0.01` |
+| `theta2_min`, `theta2_max`, `theta2_step` | Excelに保存するpost-hoc 2F MIRT用 θグリッド。デフォルトは `-4`, `4`, `0.1` |
 | `lang` | `ja`, `en`。UI 表示言語 |
 | `research` | `1` のとき研究用確認パネルを表示 |
 
 `?research=1` で開くと、研究者用パネルから `timing` と
 `response_window_ms` に加え、実施モード、音声自動再生、注視点、
-回答後待機時間、同一条件の最大連続数、キー割当などを変更し、
+回答後待機時間、同一条件の最大連続数、キー割当、EAP θグリッドなどを変更し、
 参加者配布用URLを生成できます。
 参加者画面ではこの設定は変更できず、実施条件は Excel の
 `protocol_manifest` と `metadata` に保存されます。
@@ -185,8 +187,14 @@ Adaptive 版:
 | `min_items` | 0 | 停止判定前の最小回答数。デフォルトでは40問フロアなし |
 | `max_items` | 160 | 最大出題数 |
 | `target_se` | 0.30 | `stop_rule=se` の目標SE |
-| `stop_pser` | 0.01 | 予測SE低下量がこの値未満なら停止 |
+| `stop_pser` | 0.01 | 予測SE低下量がこの値未満なら停止。平均20問前後を優先する推奨値 |
 | `quota_tol` | 0.20 | Quota CAT の Hit 比率許容幅 |
+
+θ推定はグリッド上のEAP数値積分です。主スコア (`theta_hit`, `theta_cr`)
+は1Dグリッド `[-6, 6]` を `0.01` 刻みで積分し、1,201点を使います。
+この設定を `0.001` 刻みと比較したシミュレーションでは、θ差の最大値は
+`4e-8` 未満で、測定誤差に比べて無視できる水準でした。2F MIRT補助出力は
+`[-4, 4] × [-4, 4]` を `0.1` 刻みで積分します。
 
 任意の下限を検証する場合:
 

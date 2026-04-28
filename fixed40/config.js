@@ -20,6 +20,12 @@ window.LJT_APP_CONFIG = {
     timing: 'timed',
     response_window_ms: 1250,
     lang: 'ja',
-    max_play_fails: 3
+    max_play_fails: 3,
+    theta_min: -6,
+    theta_max: 6,
+    theta_step: 0.01,
+    theta2_min: -4,
+    theta2_max: 4,
+    theta2_step: 0.1
   }
 };

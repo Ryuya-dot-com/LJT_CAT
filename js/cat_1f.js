@@ -1,6 +1,6 @@
 /* cat_1f.js — 1D Computerized Adaptive Testing engine
  *
- * θ grid: [-6, 6] step 0.01 (1,201 points)
+ * Default θ grid: [-6, 6] step 0.01 (1,201 points)
  * Prior: N(0, 1)
  * Estimator: EAP on grid
  * Item selection:
@@ -11,14 +11,40 @@
 (function (global) {
   'use strict';
 
-  const THETA_MIN  = -6;
-  const THETA_MAX  =  6;
-  const THETA_STEP = 0.01;
+  const DEFAULT_THETA_MIN  = -6;
+  const DEFAULT_THETA_MAX  =  6;
+  const DEFAULT_THETA_STEP = 0.01;
 
-  function buildGrid () {
-    const n = Math.round((THETA_MAX - THETA_MIN) / THETA_STEP) + 1;
+  function finiteNumber (value, fallback) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function normalizeGridOptions (options) {
+    const opts = options || {};
+    let min = finiteNumber(opts.thetaMin ?? opts.theta_min, DEFAULT_THETA_MIN);
+    let max = finiteNumber(opts.thetaMax ?? opts.theta_max, DEFAULT_THETA_MAX);
+    let step = finiteNumber(opts.thetaStep ?? opts.theta_step, DEFAULT_THETA_STEP);
+    min = Math.max(-8, Math.min(0, min));
+    max = Math.max(0, Math.min(8, max));
+    if (max <= min) {
+      min = DEFAULT_THETA_MIN;
+      max = DEFAULT_THETA_MAX;
+    }
+    step = Math.max(0.001, Math.min(0.1, step));
+    return {
+      thetaMin: min,
+      thetaMax: max,
+      thetaStep: step,
+      thetaPoints: Math.round((max - min) / step) + 1
+    };
+  }
+
+  function buildGrid (options) {
+    const spec = normalizeGridOptions(options);
+    const n = spec.thetaPoints;
     const g = new Float64Array(n);
-    for (let i = 0; i < n; i++) g[i] = THETA_MIN + i * THETA_STEP;
+    for (let i = 0; i < n; i++) g[i] = spec.thetaMin + i * spec.thetaStep;
     return g;
   }
 
@@ -47,7 +73,7 @@
       algorithm: 'plain',   // plain | quota | alternating
       quotaTol: 0.20
     }, options || {});
-    const grid = buildGrid();
+    const grid = buildGrid(opts);
     const n    = grid.length;
     const logPost = new Float64Array(n);
     for (let i = 0; i < n; i++) logPost[i] = standardNormalLogPdf(grid[i]);
@@ -222,7 +248,7 @@
       maxCR: 80
     }, options || {});
 
-    const grid = buildGrid();
+    const grid = buildGrid(opts);
     const n = grid.length;
     const logPost = {
       Hit: new Float64Array(n),
@@ -541,8 +567,8 @@
    * responses: object mapping item_id → 0/1
    * Returns {theta, se}.
    */
-  function scoreSubset (items, responses) {
-    const grid = buildGrid();
+  function scoreSubset (items, responses, options) {
+    const grid = buildGrid(options || {});
     const n    = grid.length;
     const logPost = new Float64Array(n);
     for (let i = 0; i < n; i++) logPost[i] = standardNormalLogPdf(grid[i]);
@@ -579,6 +605,7 @@
   global.CAT1F = {
     create: create1FSession,
     createTwoCondition: createTwoConditionSession,
-    scoreSubset: scoreSubset
+    scoreSubset: scoreSubset,
+    gridSpec: normalizeGridOptions
   };
 })(window);

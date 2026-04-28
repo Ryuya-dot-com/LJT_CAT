@@ -1,6 +1,6 @@
 /* cat_2f.js — 2D (compensatory) CAT engine
  *
- * θ grid: [-4, 4] × [-4, 4] step 0.1 (81 × 81 = 6,561 points)
+ * Default θ grid: [-4, 4] × [-4, 4] step 0.1 (81 × 81 = 6,561 points)
  * Prior: bivariate normal with factor correlation ρ (from calibration)
  * Item: P(y=1 | θ1, θ2) = logistic(a1 θ1 + a2 θ2 + d)
  * Item selection: D-optimality (determinant of Fisher info matrix)
@@ -10,14 +10,40 @@
 (function (global) {
   'use strict';
 
-  const TH_MIN  = -4;
-  const TH_MAX  =  4;
-  const TH_STEP = 0.1;
+  const DEFAULT_TH_MIN  = -4;
+  const DEFAULT_TH_MAX  =  4;
+  const DEFAULT_TH_STEP = 0.1;
 
-  function buildAxis () {
-    const n = Math.round((TH_MAX - TH_MIN) / TH_STEP) + 1;
+  function finiteNumber (value, fallback) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function normalizeAxisOptions (options) {
+    const opts = options || {};
+    let min = finiteNumber(opts.thetaMin ?? opts.theta_min, DEFAULT_TH_MIN);
+    let max = finiteNumber(opts.thetaMax ?? opts.theta_max, DEFAULT_TH_MAX);
+    let step = finiteNumber(opts.thetaStep ?? opts.theta_step, DEFAULT_TH_STEP);
+    min = Math.max(-6, Math.min(0, min));
+    max = Math.max(0, Math.min(6, max));
+    if (max <= min) {
+      min = DEFAULT_TH_MIN;
+      max = DEFAULT_TH_MAX;
+    }
+    step = Math.max(0.05, Math.min(0.2, step));
+    return {
+      thetaMin: min,
+      thetaMax: max,
+      thetaStep: step,
+      thetaPoints: Math.round((max - min) / step) + 1
+    };
+  }
+
+  function buildAxis (options) {
+    const spec = normalizeAxisOptions(options);
+    const n = spec.thetaPoints;
     const g = new Float64Array(n);
-    for (let i = 0; i < n; i++) g[i] = TH_MIN + i * TH_STEP;
+    for (let i = 0; i < n; i++) g[i] = spec.thetaMin + i * spec.thetaStep;
     return g;
   }
 
@@ -96,10 +122,10 @@
     }
   }
 
-  function create2FSession (items, factorCor) {
+  function create2FSession (items, factorCor, options) {
     const rho  = typeof factorCor === 'number' ? factorCor : 0.0;
-    const axis = buildAxis();
-    const n    = axis.length;         // 81
+    const axis = buildAxis(options || {});
+    const n    = axis.length;
     const logPost = createPriorLogPost(axis, rho);
 
     const used = new Set();
@@ -212,9 +238,9 @@
     };
   }
 
-  function scoreSubset (items, responses, factorCor) {
+  function scoreSubset (items, responses, factorCor, options) {
     const rho = typeof factorCor === 'number' ? factorCor : 0.0;
-    const axis = buildAxis();
+    const axis = buildAxis(options || {});
     const logPost = createPriorLogPost(axis, rho);
 
     let nResp = 0;
@@ -247,5 +273,9 @@
     };
   }
 
-  global.CAT2F = { create: create2FSession, scoreSubset: scoreSubset };
+  global.CAT2F = {
+    create: create2FSession,
+    scoreSubset: scoreSubset,
+    gridSpec: normalizeAxisOptions
+  };
 })(window);

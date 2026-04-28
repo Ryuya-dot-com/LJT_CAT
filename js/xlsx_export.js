@@ -36,6 +36,20 @@
     const wb = XLSX.utils.book_new();
     const reg = payload.session.reg || {};
     const reg2f = payload.session.reg_2f || {};
+    const thetaGridLabel = payload.session.theta_min !== undefined
+      ? '1D [' + payload.session.theta_min + ', ' +
+        payload.session.theta_max + '] step ' +
+        payload.session.theta_step + ' (' +
+        payload.session.theta_points + ' points)'
+      : '1D [-6, 6] step 0.01';
+    const theta2GridLabel = payload.session.theta2_min !== undefined
+      ? '2D [' + payload.session.theta2_min + ', ' +
+        payload.session.theta2_max + '] x [' +
+        payload.session.theta2_min + ', ' +
+        payload.session.theta2_max + '] step ' +
+        payload.session.theta2_step + ' (' +
+        payload.session.theta2_grid_points + ' points)'
+      : '2D [-4, 4] x [-4, 4] step 0.1';
     const practiceSummary = payload.practice.summary || {};
     const thetaGapFlag = payload.final.response_pattern_theta_gap_flag !== undefined
       ? payload.final.response_pattern_theta_gap_flag
@@ -112,6 +126,15 @@
       pace:                 payload.session.pace || '',
       self_paced:           !!payload.session.self_paced,
       advance_key:          payload.session.advance_key || '',
+      theta_min:            payload.session.theta_min,
+      theta_max:            payload.session.theta_max,
+      theta_step:           payload.session.theta_step,
+      theta_points:         payload.session.theta_points,
+      theta2_min:           payload.session.theta2_min,
+      theta2_max:           payload.session.theta2_max,
+      theta2_step:          payload.session.theta2_step,
+      theta2_axis_points:   payload.session.theta2_axis_points,
+      theta2_grid_points:   payload.session.theta2_grid_points,
       theta_hit:            payload.final.theta_hit,
       se_hit:               payload.final.se_hit,
       theta_cr:             payload.final.theta_cr,
@@ -179,10 +202,10 @@
       { key: 'research_mode',       value: !!payload.session.research_mode },
       { key: 'theta_grid',
         value: payload.session.mode === 'fixed40'
-          ? 'Fixed 40-item balanced short form'
+          ? thetaGridLabel + ' (fixed 40-item balanced short form)'
           : payload.session.mode === '1F'
-          ? '1D [-6, 6] step 0.01'
-          : '2D [-4, 4] x [-4, 4] step 0.1' },
+          ? thetaGridLabel
+          : theta2GridLabel },
       { key: 'stopping_rule',
         value: payload.session.stop_rule === 'blueprint_pser'
           ? 'Blueprint PSER: no stopping before min n = ' +
@@ -231,6 +254,24 @@
         value: !!payload.session.self_paced },
       { key: 'advance_key',
         value: payload.session.advance_key || '' },
+      { key: 'theta_min',
+        value: payload.session.theta_min },
+      { key: 'theta_max',
+        value: payload.session.theta_max },
+      { key: 'theta_step',
+        value: payload.session.theta_step },
+      { key: 'theta_points',
+        value: payload.session.theta_points },
+      { key: 'theta2_min',
+        value: payload.session.theta2_min },
+      { key: 'theta2_max',
+        value: payload.session.theta2_max },
+      { key: 'theta2_step',
+        value: payload.session.theta2_step },
+      { key: 'theta2_axis_points',
+        value: payload.session.theta2_axis_points },
+      { key: 'theta2_grid_points',
+        value: payload.session.theta2_grid_points },
       { key: 'timing_mode',
         value: payload.session.timing_mode || '' },
       { key: 'response_window_ms',

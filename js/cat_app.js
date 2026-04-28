@@ -46,7 +46,13 @@
     fixation_ms: 500,
     post_response_ms: 350,
     pace: 'auto',
-    max_condition_run: 2
+    max_condition_run: 2,
+    theta_min: -6,
+    theta_max: 6,
+    theta_step: 0.01,
+    theta2_min: -4,
+    theta2_max: 4,
+    theta2_step: 0.1
   }, APP_CONFIG.defaults || {});
 
   const I18N = {
@@ -186,6 +192,20 @@
       researchTargetSeLabel: '目標SE',
       researchStopPserLabel: 'PSER停止しきい値',
       researchQuotaTolLabel: 'Quota許容幅',
+      researchStopPserHelp: '平均20問前後を優先する推奨値は0.01です。小さくすると出題数が増え、推定精度は上がります。',
+      researchStopPserGuide: '目安: 0.01 ≈ 平均20問、0.005 ≈ 平均34問、0.0025 ≈ 平均55問。',
+      researchNumericalSettingsTitle: 'EAP数値積分・θグリッド',
+      researchNumericalSettingsNote: '通常は推奨値のまま使用してください。シミュレーションでは、主スコアの0.01刻みによる数値誤差は測定誤差に比べて十分小さいことを確認済みです。',
+      researchTheta1DMinLabel: '1D θ下限',
+      researchTheta1DMaxLabel: '1D θ上限',
+      researchTheta1DStepLabel: '1D θ刻み',
+      researchTheta1DPointsLabel: '1Dグリッド点数',
+      researchTheta2DMinLabel: '2F θ下限',
+      researchTheta2DMaxLabel: '2F θ上限',
+      researchTheta2DStepLabel: '2F θ刻み',
+      researchTheta2DPointsLabel: '2Fグリッド点数',
+      researchTheta1DHelp: '主スコア theta_hit / theta_cr とCAT項目選択に使う1D EAPグリッドです。推奨: -6〜6、0.01刻み (1201点)。',
+      researchTheta2DHelp: 'Excelに保存するpost-hoc 2F MIRT補助スコア用です。推奨: -4〜4、0.1刻み (81×81点)。',
       researchTimedOption: 'Timed',
       researchUntimedOption: 'Untimed',
       researchWindowPresetLabel: 'Timed制限時間',
@@ -348,6 +368,20 @@
       researchTargetSeLabel: 'Target SE',
       researchStopPserLabel: 'PSER stopping threshold',
       researchQuotaTolLabel: 'Quota tolerance',
+      researchStopPserHelp: 'The recommended value for prioritizing about 20 items on average is 0.01. Smaller values increase test length and precision.',
+      researchStopPserGuide: 'Rule of thumb: 0.01 ≈ 20 items on average; 0.005 ≈ 34; 0.0025 ≈ 55.',
+      researchNumericalSettingsTitle: 'EAP Integration and Theta Grid',
+      researchNumericalSettingsNote: 'Use the recommended defaults unless you are doing a numerical sensitivity check. Simulations showed that the 0.01 grid for primary scores adds negligible numerical error relative to measurement error.',
+      researchTheta1DMinLabel: '1D theta min',
+      researchTheta1DMaxLabel: '1D theta max',
+      researchTheta1DStepLabel: '1D theta step',
+      researchTheta1DPointsLabel: '1D grid points',
+      researchTheta2DMinLabel: '2F theta min',
+      researchTheta2DMaxLabel: '2F theta max',
+      researchTheta2DStepLabel: '2F theta step',
+      researchTheta2DPointsLabel: '2F grid points',
+      researchTheta1DHelp: '1D EAP grid used for theta_hit / theta_cr and CAT item selection. Recommended: -6 to 6, step 0.01 (1,201 points).',
+      researchTheta2DHelp: 'Grid for post-hoc 2F MIRT sensitivity scores saved in Excel. Recommended: -4 to 4, step 0.1 (81 x 81 points).',
       researchTimedOption: 'Timed',
       researchUntimedOption: 'Untimed',
       researchWindowPresetLabel: 'Timed response window',
@@ -448,6 +482,50 @@
     let out = Number.isFinite(parsed) ? parsed : def;
     out = Math.max(min, Math.min(max, out));
     return integer ? Math.round(out) : out;
+  }
+
+  function normalizeThetaGridParams () {
+    if (state.params.theta_max <= state.params.theta_min) {
+      state.params.theta_min = DEFAULTS.theta_min;
+      state.params.theta_max = DEFAULTS.theta_max;
+    }
+    if (state.params.theta2_max <= state.params.theta2_min) {
+      state.params.theta2_min = DEFAULTS.theta2_min;
+      state.params.theta2_max = DEFAULTS.theta2_max;
+    }
+  }
+
+  function thetaGridPoints (min, max, step) {
+    return Math.round((Number(max) - Number(min)) / Number(step)) + 1;
+  }
+
+  function thetaGrid1DOptions (source) {
+    const p = source || state.params;
+    return {
+      thetaMin: Number(p.theta_min),
+      thetaMax: Number(p.theta_max),
+      thetaStep: Number(p.theta_step)
+    };
+  }
+
+  function thetaGrid2DOptions (source) {
+    const p = source || state.params;
+    return {
+      thetaMin: Number(p.theta2_min),
+      thetaMax: Number(p.theta2_max),
+      thetaStep: Number(p.theta2_step)
+    };
+  }
+
+  function thetaGrid1DPointCount (source) {
+    const p = source || state.params;
+    return thetaGridPoints(p.theta_min, p.theta_max, p.theta_step);
+  }
+
+  function thetaGrid2DPointCount (source) {
+    const p = source || state.params;
+    const axis = thetaGridPoints(p.theta2_min, p.theta2_max, p.theta2_step);
+    return axis * axis;
   }
 
   function booleanParam (params, names, def) {
@@ -652,6 +730,19 @@
       p, 'max_condition_run',
       Number(presentationOption('maxConditionRun', DEFAULTS.max_condition_run)),
       1, 10, true);
+    state.params.theta_min = boundedNumberParam(
+      p, 'theta_min', DEFAULTS.theta_min, -8, 0, false);
+    state.params.theta_max = boundedNumberParam(
+      p, 'theta_max', DEFAULTS.theta_max, 0, 8, false);
+    state.params.theta_step = boundedNumberParam(
+      p, 'theta_step', DEFAULTS.theta_step, 0.001, 0.1, false);
+    state.params.theta2_min = boundedNumberParam(
+      p, 'theta2_min', DEFAULTS.theta2_min, -6, 0, false);
+    state.params.theta2_max = boundedNumberParam(
+      p, 'theta2_max', DEFAULTS.theta2_max, 0, 6, false);
+    state.params.theta2_step = boundedNumberParam(
+      p, 'theta2_step', DEFAULTS.theta2_step, 0.05, 0.2, false);
+    normalizeThetaGridParams();
     if (state.params.min_items > state.params.max_items) {
       state.params.min_items = state.params.max_items;
     }
@@ -894,6 +985,32 @@
     );
     const pace = normalizePace(opts.pace || state.params.pace || DEFAULTS.pace);
     const keymap = normalizeKeymap(opts.keymap || state.params.keymap);
+    let thetaMin = boundedNumberValue(
+      opts.theta_min === undefined ? state.params.theta_min : opts.theta_min,
+      DEFAULTS.theta_min, -8, 0, false);
+    let thetaMax = boundedNumberValue(
+      opts.theta_max === undefined ? state.params.theta_max : opts.theta_max,
+      DEFAULTS.theta_max, 0, 8, false);
+    const thetaStep = boundedNumberValue(
+      opts.theta_step === undefined ? state.params.theta_step : opts.theta_step,
+      DEFAULTS.theta_step, 0.001, 0.1, false);
+    if (thetaMax <= thetaMin) {
+      thetaMin = DEFAULTS.theta_min;
+      thetaMax = DEFAULTS.theta_max;
+    }
+    let theta2Min = boundedNumberValue(
+      opts.theta2_min === undefined ? state.params.theta2_min : opts.theta2_min,
+      DEFAULTS.theta2_min, -6, 0, false);
+    let theta2Max = boundedNumberValue(
+      opts.theta2_max === undefined ? state.params.theta2_max : opts.theta2_max,
+      DEFAULTS.theta2_max, 0, 6, false);
+    const theta2Step = boundedNumberValue(
+      opts.theta2_step === undefined ? state.params.theta2_step : opts.theta2_step,
+      DEFAULTS.theta2_step, 0.05, 0.2, false);
+    if (theta2Max <= theta2Min) {
+      theta2Min = DEFAULTS.theta2_min;
+      theta2Max = DEFAULTS.theta2_max;
+    }
     u.pathname = deliveryPathname(u.pathname, delivery);
     u.searchParams.set('lang', state.lang);
     u.searchParams.set('timing', mode);
@@ -905,6 +1022,12 @@
     u.searchParams.set('max_condition_run', String(maxRun));
     u.searchParams.set('max_play_fails', String(maxFails));
     u.searchParams.set('keymap', keymap);
+    u.searchParams.set('theta_min', String(thetaMin));
+    u.searchParams.set('theta_max', String(thetaMax));
+    u.searchParams.set('theta_step', String(thetaStep));
+    u.searchParams.set('theta2_min', String(theta2Min));
+    u.searchParams.set('theta2_max', String(theta2Max));
+    u.searchParams.set('theta2_step', String(theta2Step));
     if (mode === 'timed') {
       u.searchParams.set('response_window_ms', String(ms));
     } else {
@@ -1361,17 +1484,23 @@
         maxHit: state.params.max_items === bp.maxItems ? bp.maxHit
           : Math.floor(state.params.max_items / 2),
         maxCR: state.params.max_items === bp.maxItems ? bp.maxCR
-          : state.params.max_items - Math.floor(state.params.max_items / 2)
+          : state.params.max_items - Math.floor(state.params.max_items / 2),
+        thetaMin: state.params.theta_min,
+        thetaMax: state.params.theta_max,
+        thetaStep: state.params.theta_step
       });
     }
     if (state.mode === '1F') {
       return window.CAT1F.create(state.calibration.item_bank_1f, {
         algorithm: state.delivery === 'adaptive' ? state.algorithm : 'plain',
-        quotaTol: state.params.quota_tol
+        quotaTol: state.params.quota_tol,
+        thetaMin: state.params.theta_min,
+        thetaMax: state.params.theta_max,
+        thetaStep: state.params.theta_step
       });
     }
     const rho = state.calibration.regression.factor_cor_2F;
-    return window.CAT2F.create(state.calibration.item_bank_2f, rho);
+    return window.CAT2F.create(state.calibration.item_bank_2f, rho, thetaGrid2DOptions());
   }
 
   function buildFixed40Items () {
@@ -1466,6 +1595,16 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function researchHelp (text) {
+    return '<abbr class="research-help" tabindex="0" title="' +
+      escapeHtml(text) + '" aria-label="' + escapeHtml(text) + '">?</abbr>';
+  }
+
+  function researchLabel (label, help) {
+    return '<span class="research-label">' + escapeHtml(label) +
+      (help ? researchHelp(help) : '') + '</span>';
   }
 
   function fmtNum (value) {
@@ -1570,6 +1709,14 @@
     const paceEl = $('research-pace-mode');
     const maxRunEl = $('research-max-condition-run');
     const maxFailsEl = $('research-max-play-fails');
+    const thetaMinEl = $('research-theta-min');
+    const thetaMaxEl = $('research-theta-max');
+    const thetaStepEl = $('research-theta-step');
+    const thetaPointsEl = $('research-theta-points');
+    const theta2MinEl = $('research-theta2-min');
+    const theta2MaxEl = $('research-theta2-max');
+    const theta2StepEl = $('research-theta2-step');
+    const theta2PointsEl = $('research-theta2-points');
     const algorithmEl = $('research-algorithm');
     const stopRuleEl = $('research-stop-rule');
     const minItemsEl = $('research-min-items');
@@ -1597,6 +1744,12 @@
         pace: paceEl ? paceEl.value : state.params.pace,
         max_condition_run: maxRunEl ? maxRunEl.value : maxConditionRun(),
         max_play_fails: maxFailsEl ? maxFailsEl.value : state.params.max_play_fails,
+        theta_min: thetaMinEl ? thetaMinEl.value : state.params.theta_min,
+        theta_max: thetaMaxEl ? thetaMaxEl.value : state.params.theta_max,
+        theta_step: thetaStepEl ? thetaStepEl.value : state.params.theta_step,
+        theta2_min: theta2MinEl ? theta2MinEl.value : state.params.theta2_min,
+        theta2_max: theta2MaxEl ? theta2MaxEl.value : state.params.theta2_max,
+        theta2_step: theta2StepEl ? theta2StepEl.value : state.params.theta2_step,
         algorithm: algorithmEl ? algorithmEl.value : 'blueprint',
         stop_rule: stopRuleEl ? stopRuleEl.value : 'blueprint_pser',
         min_items: minItemsEl ? minItemsEl.value : (targetAdaptive ? DEFAULTS.min_items : state.params.min_items),
@@ -1610,11 +1763,25 @@
     const refreshControls = () => {
       const timed = normalizeTiming(timingEl.value) === 'timed';
       const custom = presetEl.value === 'custom';
+      const overrides = readOverrides();
       presetEl.disabled = !timed;
       customEl.disabled = !timed || !custom;
       customEl.parentElement.classList.toggle('hidden', !timed || !custom);
       helpEl.textContent = timed ? t('researchTimedHelp') : t('researchUntimedHelp');
-      urlEl.value = buildProtocolURL(false, readOverrides());
+      if (thetaPointsEl) {
+        const min = boundedNumberValue(overrides.theta_min, DEFAULTS.theta_min, -8, 0, false);
+        const max = boundedNumberValue(overrides.theta_max, DEFAULTS.theta_max, 0, 8, false);
+        const step = boundedNumberValue(overrides.theta_step, DEFAULTS.theta_step, 0.001, 0.1, false);
+        thetaPointsEl.textContent = max > min ? String(thetaGridPoints(min, max, step)) : '1201';
+      }
+      if (theta2PointsEl) {
+        const min = boundedNumberValue(overrides.theta2_min, DEFAULTS.theta2_min, -6, 0, false);
+        const max = boundedNumberValue(overrides.theta2_max, DEFAULTS.theta2_max, 0, 6, false);
+        const step = boundedNumberValue(overrides.theta2_step, DEFAULTS.theta2_step, 0.05, 0.2, false);
+        const axis = max > min ? thetaGridPoints(min, max, step) : 81;
+        theta2PointsEl.textContent = axis + ' x ' + axis + ' = ' + (axis * axis);
+      }
+      urlEl.value = buildProtocolURL(false, overrides);
     };
 
     if (deliveryEl) deliveryEl.addEventListener('change', refreshControls);
@@ -1623,6 +1790,7 @@
     customEl.addEventListener('input', refreshControls);
     [
       keymapEl, autoPlayEl, fixationEl, postResponseEl, paceEl, maxRunEl, maxFailsEl,
+      thetaMinEl, thetaMaxEl, thetaStepEl, theta2MinEl, theta2MaxEl, theta2StepEl,
       algorithmEl, stopRuleEl, minItemsEl, maxItemsEl, targetSeEl, stopPserEl, quotaTolEl
     ].forEach(el => {
       if (!el) return;
@@ -1662,6 +1830,19 @@
           overrides.max_condition_run, DEFAULTS.max_condition_run, 1, 10, true);
         state.params.max_play_fails = boundedNumberValue(
           overrides.max_play_fails, DEFAULTS.max_play_fails, 0, 10, true);
+        state.params.theta_min = boundedNumberValue(
+          overrides.theta_min, DEFAULTS.theta_min, -8, 0, false);
+        state.params.theta_max = boundedNumberValue(
+          overrides.theta_max, DEFAULTS.theta_max, 0, 8, false);
+        state.params.theta_step = boundedNumberValue(
+          overrides.theta_step, DEFAULTS.theta_step, 0.001, 0.1, false);
+        state.params.theta2_min = boundedNumberValue(
+          overrides.theta2_min, DEFAULTS.theta2_min, -6, 0, false);
+        state.params.theta2_max = boundedNumberValue(
+          overrides.theta2_max, DEFAULTS.theta2_max, 0, 6, false);
+        state.params.theta2_step = boundedNumberValue(
+          overrides.theta2_step, DEFAULTS.theta2_step, 0.05, 0.2, false);
+        normalizeThetaGridParams();
         if (state.delivery === 'adaptive') {
           const adaptiveBounds = adaptiveItemBounds();
           const defaultMinItems = Math.min(
@@ -1695,6 +1876,12 @@
           pace: state.params.pace,
           max_condition_run: maxConditionRun(),
           max_play_fails: state.params.max_play_fails,
+          theta_min: state.params.theta_min,
+          theta_max: state.params.theta_max,
+          theta_step: state.params.theta_step,
+          theta2_min: state.params.theta2_min,
+          theta2_max: state.params.theta2_max,
+          theta2_step: state.params.theta2_step,
           keymap: state.params.keymap,
           participant_url: participantProtocolURL()
         });
@@ -1810,15 +1997,49 @@
             '<label><span>' + escapeHtml(t('researchTargetSeLabel')) + '</span>' +
               '<input type="number" id="research-target-se" min="0.05" max="2" step="0.01" value="' +
                 escapeHtml(state.params.target_se) + '" /></label>' +
-            '<label><span>' + escapeHtml(t('researchStopPserLabel')) + '</span>' +
+            '<label>' + researchLabel(t('researchStopPserLabel'), t('researchStopPserHelp')) +
               '<input type="number" id="research-stop-pser" min="0" max="1" step="0.001" value="' +
-                escapeHtml(state.params.stop_pser) + '" /></label>' +
+                escapeHtml(state.params.stop_pser) + '" />' +
+              '<small>' + escapeHtml(t('researchStopPserGuide')) + '</small></label>' +
             '<label><span>' + escapeHtml(t('researchQuotaTolLabel')) + '</span>' +
               '<input type="number" id="research-quota-tol" min="0" max="0.49" step="0.01" value="' +
                 escapeHtml(state.params.quota_tol) + '" /></label>' +
           '</div>' +
         '</div>'
       : '';
+    const theta2AxisPoints = Math.round(Math.sqrt(thetaGrid2DPointCount()));
+    const numericalSettingsHtml =
+      '<div class="research-protocol-subsection">' +
+        '<h5>' + escapeHtml(t('researchNumericalSettingsTitle')) + '</h5>' +
+        '<p class="research-model">' + escapeHtml(t('researchNumericalSettingsNote')) + '</p>' +
+        '<div class="research-control-grid">' +
+          '<label>' + researchLabel(t('researchTheta1DMinLabel'), t('researchTheta1DHelp')) +
+            '<input type="number" id="research-theta-min" min="-8" max="0" step="0.5" value="' +
+              escapeHtml(state.params.theta_min) + '" /></label>' +
+          '<label>' + researchLabel(t('researchTheta1DMaxLabel'), t('researchTheta1DHelp')) +
+            '<input type="number" id="research-theta-max" min="0" max="8" step="0.5" value="' +
+              escapeHtml(state.params.theta_max) + '" /></label>' +
+          '<label>' + researchLabel(t('researchTheta1DStepLabel'), t('researchTheta1DHelp')) +
+            '<input type="number" id="research-theta-step" min="0.001" max="0.1" step="0.001" value="' +
+              escapeHtml(state.params.theta_step) + '" /></label>' +
+          '<label><span>' + escapeHtml(t('researchTheta1DPointsLabel')) + '</span>' +
+            '<output id="research-theta-points" class="research-grid-points">' +
+              escapeHtml(thetaGrid1DPointCount()) + '</output></label>' +
+          '<label>' + researchLabel(t('researchTheta2DMinLabel'), t('researchTheta2DHelp')) +
+            '<input type="number" id="research-theta2-min" min="-6" max="0" step="0.5" value="' +
+              escapeHtml(state.params.theta2_min) + '" /></label>' +
+          '<label>' + researchLabel(t('researchTheta2DMaxLabel'), t('researchTheta2DHelp')) +
+            '<input type="number" id="research-theta2-max" min="0" max="6" step="0.5" value="' +
+              escapeHtml(state.params.theta2_max) + '" /></label>' +
+          '<label>' + researchLabel(t('researchTheta2DStepLabel'), t('researchTheta2DHelp')) +
+            '<input type="number" id="research-theta2-step" min="0.05" max="0.2" step="0.05" value="' +
+              escapeHtml(state.params.theta2_step) + '" /></label>' +
+          '<label><span>' + escapeHtml(t('researchTheta2DPointsLabel')) + '</span>' +
+            '<output id="research-theta2-points" class="research-grid-points">' +
+              escapeHtml(theta2AxisPoints + ' x ' + theta2AxisPoints + ' = ' +
+                thetaGrid2DPointCount()) + '</output></label>' +
+        '</div>' +
+      '</div>';
     const protocolHtml =
       '<div class="research-protocol">' +
         '<h4>' + escapeHtml(t('researchProtocolTitle')) + '</h4>' +
@@ -1887,6 +2108,7 @@
             '</select></label>' +
         '</div>' +
         adaptiveProtocolHtml +
+        numericalSettingsHtml +
         '<p id="research-timing-help" class="research-model"></p>' +
         '<div class="research-url-row">' +
           '<label><span>' + escapeHtml(t('researchParticipantUrlLabel')) + '</span>' +
@@ -2584,8 +2806,8 @@
       else                         crResp[row.targetword]  = row.correct;
     });
 
-    const hitScore = window.CAT1F.scoreSubset(hitItemsWithIds, hitResp);
-    const crScore  = window.CAT1F.scoreSubset(crItemsWithIds,  crResp);
+    const hitScore = window.CAT1F.scoreSubset(hitItemsWithIds, hitResp, thetaGrid1DOptions());
+    const crScore  = window.CAT1F.scoreSubset(crItemsWithIds,  crResp, thetaGrid1DOptions());
     return { hit: hitScore, cr: crScore };
   }
 
@@ -2601,7 +2823,7 @@
     catLog.forEach(row => {
       if (row.correct === 0 || row.correct === 1) responses[row.item_id] = row.correct;
     });
-    return window.CAT2F.scoreSubset(items2F, responses, rho);
+    return window.CAT2F.scoreSubset(items2F, responses, rho, thetaGrid2DOptions());
   }
 
   function summarizeResponseCoverage (catLog) {
@@ -2767,6 +2989,24 @@
         max_condition_run: maxConditionRun(),
         keymap_policy: state.params.keymap || 'counterbalanced',
         response_keymap_id: state.responseMapping ? state.responseMapping.keymap_id : ''
+      },
+      scoring_grid: {
+        one_d_eap: {
+          theta_min: state.params.theta_min,
+          theta_max: state.params.theta_max,
+          theta_step: state.params.theta_step,
+          theta_points: thetaGrid1DPointCount(),
+          role: 'primary theta_hit/theta_cr scoring and adaptive item selection'
+        },
+        two_f_posthoc: {
+          theta_min: state.params.theta2_min,
+          theta_max: state.params.theta2_max,
+          theta_step: state.params.theta2_step,
+          theta_axis_points: thetaGridPoints(
+            state.params.theta2_min, state.params.theta2_max, state.params.theta2_step),
+          theta_grid_points: thetaGrid2DPointCount(),
+          role: 'post-hoc 2F MIRT sensitivity scoring'
+        }
       },
       ux: {
         instruction_version: UX_INSTRUCTION_VERSION,
@@ -3063,6 +3303,16 @@
     state.session.pace = state.params.pace;
     state.session.self_paced = isSelfPaced();
     state.session.advance_key = isSelfPaced() ? 'Space' : '';
+    state.session.theta_min = state.params.theta_min;
+    state.session.theta_max = state.params.theta_max;
+    state.session.theta_step = state.params.theta_step;
+    state.session.theta_points = thetaGrid1DPointCount();
+    state.session.theta2_min = state.params.theta2_min;
+    state.session.theta2_max = state.params.theta2_max;
+    state.session.theta2_step = state.params.theta2_step;
+    state.session.theta2_axis_points = thetaGridPoints(
+      state.params.theta2_min, state.params.theta2_max, state.params.theta2_step);
+    state.session.theta2_grid_points = thetaGrid2DPointCount();
     state.session.timing_mode = state.params.timing;
     state.session.response_window_ms = responseWindowMs();
     state.session.response_keymap_id = state.responseMapping ? state.responseMapping.keymap_id : '';

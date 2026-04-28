@@ -34,6 +34,12 @@ window.LJT_APP_CONFIG = {
     lang: 'ja',
     stop_pser: 0.01,
     quota_tol: 0.20,
-    max_play_fails: 3
+    max_play_fails: 3,
+    theta_min: -6,
+    theta_max: 6,
+    theta_step: 0.01,
+    theta2_min: -4,
+    theta2_max: 4,
+    theta2_step: 0.1
   }
 };
