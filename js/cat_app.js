@@ -1,7 +1,7 @@
 /* cat_app.js — LJT-CAT main orchestrator (v2)
  *
  * Stages: welcome → instructions → practice → transition → main → result
- * URL parameters are controlled by fixed40/config.js or adaptive/config.js.
+ * URL parameters are controlled by adaptive/config.js.
  *                 ?lab=<labcode>
  *                 adaptive/: ?algorithm=blueprint|alternating|quota &stop_rule=blueprint_pser|pser|se|max_items
  *                 adaptive/: ?target_se=0.30 &min_items=0 &max_items=160
@@ -12,8 +12,7 @@
  *                 ?lang=ja|en
  *                 ?research=1 (show calibration / item-bank audit panel)
  *
- * Scoring (v2.1): fixed40 delivery uses the validated disjoint 20+20 form.
- * Adaptive delivery uses the full 160-item bank with a blueprint CAT based on
+ * Scoring (v2.1): adaptive delivery uses the full 160-item bank with a blueprint CAT based on
  * the per-condition 1D 2PL banks (mod_hit / mod_cr). Final θ is computed
  * separately from those same per-condition banks; the combined 1F model is
  * retained only as a legacy calibration artifact.
@@ -29,8 +28,7 @@
     delivery: 'landing',
     assetBase: '.',
     defaultAlgorithm: 'blueprint',
-    defaultStopRule: 'blueprint_pser',
-    fixedPerCondition: 20
+    defaultStopRule: 'blueprint_pser'
   }, window.LJT_APP_CONFIG || {});
 
   const DEFAULTS = Object.assign({
@@ -54,15 +52,16 @@
     theta_step: 0.01,
     theta2_min: -4,
     theta2_max: 4,
-    theta2_step: 0.1
+    theta2_step: 0.1,
+    // NT threshold (ms) for rapid-guessing-aware auxiliary theta.
+    // See Wise & Ma (2012); Wise & DeMars (2006). Live theta unaffected.
+    nt_threshold_ms: 350
   }, APP_CONFIG.defaults || {});
 
   const I18N = {
     ja: {
-      documentTitleFixed: '語彙意味判断テスト',
       documentTitleAdaptive: '語彙意味判断テスト',
       appTitle: '語彙意味判断テスト',
-      subtitleFixed: 'リスニング形式',
       subtitleAdaptive: 'リスニング形式',
       browserWarning: 'このテストは <strong>Google Chrome</strong> のブラウザでのみご利用いただけます。<br />PC の Chrome でこのページを開き直してください。',
       welcomeTitle: 'ようこそ',
@@ -70,7 +69,6 @@
       noteAutoplay: '各問題では、中央の「+」のあと音声が<strong>自動で1回</strong>再生されます。',
       noteManualPlay: '各問題では、中央の「+」のあと表示される<strong>音声再生ボタン</strong>を押すと音声が1回再生されます。',
       notePractice: '練習が<strong>4問</strong>あり、そのあと本試行に進みます。',
-      noteFixedLength: '本試行は<strong>40問</strong>です。',
       noteAdaptiveLength: '本試行の問題数は回答状況に応じて変わります。',
       noteNoSpelling: '判断対象語のスペルは画面に表示されません。',
       noteNoScoreShown: '本試行では正誤フィードバックやスコアは表示されません。',
@@ -157,7 +155,6 @@
       researchSelectionModel: '項目選択モデル',
       researchForm: 'フォーム',
       researchItemsTitle: '提示語・項目パラメータ一覧',
-      researchFixedNote: '固定40問版で提示される40項目です。実際の順序はセッションごとに制約付きランダム化されます。',
       researchAdaptiveNote: 'Adaptive版で候補となる全160項目です。実際の提示項目と順序は回答に応じてこの候補プールから決まります。',
       researchNoItems: '表示できる項目情報がありません。',
       researchColRank: 'rank',
@@ -171,7 +168,6 @@
       researchProtocolNote: 'ここで設定した内容は参加者用URLとExcelの protocol_manifest に保存されます。参加者画面では変更できません。',
       researchTimingModeLabel: '時間制限',
       researchDeliveryModeLabel: '実施モード',
-      researchFixed40Option: '固定40問',
       researchAdaptiveOption: 'Adaptive CAT',
       researchKeymapLabel: 'F/Jキー割当',
       researchKeymapCounterbalanced: '参加者IDでカウンターバランス',
@@ -239,10 +235,8 @@
       researchVisibleRows: '表示中 {visible} / {total} 項目'
     },
     en: {
-      documentTitleFixed: 'Lexicosemantic Judgement Test',
       documentTitleAdaptive: 'Lexicosemantic Judgement Test',
       appTitle: 'Lexicosemantic Judgement Test',
-      subtitleFixed: 'Listening format',
       subtitleAdaptive: 'Listening format',
       browserWarning: 'This test is available only in <strong>Google Chrome</strong> on a desktop or laptop computer.<br />Please reopen this page in Chrome on a PC.',
       welcomeTitle: 'Welcome',
@@ -250,7 +244,6 @@
       noteAutoplay: 'On each trial, audio plays <strong>automatically once</strong> after the central “+”.',
       noteManualPlay: 'On each trial, press the <strong>play-audio button</strong> shown after the central “+”; the audio plays once.',
       notePractice: 'There are <strong>4 practice trials</strong>, followed by the main test.',
-      noteFixedLength: 'The main test has <strong>40 trials</strong>.',
       noteAdaptiveLength: 'The number of main-test trials depends on your responses.',
       noteNoSpelling: 'The spelling of the word to judge is not shown on screen.',
       noteNoScoreShown: 'No correctness feedback or score is shown during the main test.',
@@ -337,7 +330,6 @@
       researchSelectionModel: 'Item selection model',
       researchForm: 'Form',
       researchItemsTitle: 'Presented Words and Item Parameters',
-      researchFixedNote: 'These are the 40 items used in the fixed form. The actual order is constrained-randomized for each session.',
       researchAdaptiveNote: 'These are the full 160 candidate items used by the adaptive version. The actual administered items and order are selected from this pool based on responses.',
       researchNoItems: 'No item information is available.',
       researchColRank: 'rank',
@@ -351,7 +343,6 @@
       researchProtocolNote: 'These settings are written to the participant URL and the Excel protocol_manifest sheet. Participants cannot change them.',
       researchTimingModeLabel: 'Timing mode',
       researchDeliveryModeLabel: 'Delivery mode',
-      researchFixed40Option: 'Fixed 40',
       researchAdaptiveOption: 'Adaptive CAT',
       researchKeymapLabel: 'F/J key mapping',
       researchKeymapCounterbalanced: 'Counterbalanced by participant ID',
@@ -461,9 +452,7 @@
     questionStart: 0,
     algorithm: APP_CONFIG.defaultAlgorithm,
     stopRule: APP_CONFIG.defaultStopRule,
-    fixedItems: [],
     adaptiveItems: [],
-    fixedConditionSchedule: [],
     responseMapping: null,
     currentResponseCleanup: null,
     researchStatusTimer: null,
@@ -572,73 +561,6 @@
     return out;
   }
 
-  function tailRunLength (schedule) {
-    if (!schedule.length) return { condition: null, length: 0 };
-    const condition = schedule[schedule.length - 1];
-    let length = 0;
-    for (let i = schedule.length - 1; i >= 0; i--) {
-      if (schedule[i] !== condition) break;
-      length++;
-    }
-    return { condition, length };
-  }
-
-  function isStrictAlternating (schedule) {
-    if (schedule.length < 6) return false;
-    for (let i = 1; i < schedule.length; i++) {
-      if (schedule[i] === schedule[i - 1]) return false;
-    }
-    return true;
-  }
-
-  function buildBalancedConditionSchedule (nHit, nCR, maxRun) {
-    const maxAttempts = 1000;
-    const runLimit = maxRun || 2;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const remaining = { Hit: nHit, CR: nCR };
-      const schedule = [];
-      while (remaining.Hit + remaining.CR > 0) {
-        const run = tailRunLength(schedule);
-        let candidates = ['Hit', 'CR'].filter(cond => {
-          if (remaining[cond] <= 0) return false;
-          return !(run.condition === cond && run.length >= runLimit);
-        });
-        if (!candidates.length) break;
-        candidates = shuffleCopy(candidates);
-        const total = candidates.reduce((acc, cond) => acc + remaining[cond], 0);
-        let draw = Math.random() * total;
-        let chosen = candidates[candidates.length - 1];
-        for (let i = 0; i < candidates.length; i++) {
-          draw -= remaining[candidates[i]];
-          if (draw <= 0) { chosen = candidates[i]; break; }
-        }
-        schedule.push(chosen);
-        remaining[chosen]--;
-      }
-      if (schedule.length === nHit + nCR && !isStrictAlternating(schedule)) {
-        return schedule;
-      }
-    }
-
-    const fallback = [];
-    let h = nHit;
-    let c = nCR;
-    while (h > 0 || c > 0) {
-      const run = tailRunLength(fallback);
-      const preferHit = h >= c;
-      let chosen = preferHit ? 'Hit' : 'CR';
-      if (run.condition === chosen && run.length >= runLimit) {
-        chosen = chosen === 'Hit' ? 'CR' : 'Hit';
-      }
-      if (chosen === 'Hit' && h <= 0) chosen = 'CR';
-      if (chosen === 'CR' && c <= 0) chosen = 'Hit';
-      fallback.push(chosen);
-      if (chosen === 'Hit') h--; else c--;
-    }
-    return fallback;
-  }
-
   function generateUUID () {
     if (window.crypto && window.crypto.getRandomValues) {
       const arr = new Uint8Array(16);
@@ -699,11 +621,7 @@
     state.researchMode = ['1', 'true', 'yes', 'on'].includes(
       String(p.get('research') || p.get('research_mode') || '').toLowerCase()
     );
-    const rawMode = (p.get('mode') || '1f').toLowerCase();
-    state.mode = (state.delivery !== 'fixed40' && state.delivery !== 'adaptive' &&
-                  (rawMode === '2f_research' || rawMode === '2f'))
-      ? '2F_research'
-      : '1F';
+    state.mode = '1F';
     state.labCode = p.get('lab') || '';
     state.params.target_se = boundedNumberParam(
       p, 'target_se', DEFAULTS.target_se, 0.05, 2.0, false);
@@ -765,15 +683,18 @@
       p, 'theta2_max', DEFAULTS.theta2_max, 0, 6, false);
     state.params.theta2_step = boundedNumberParam(
       p, 'theta2_step', DEFAULTS.theta2_step, 0.05, 0.2, false);
+    // NT threshold for rapid-guessing-aware auxiliary scoring (Wise & Ma 2012).
+    // Live theta is unaffected; auxiliary `theta_*_nt<NNN>` columns are added
+    // in summary. Default 350 ms; lower-proficiency populations may use 500 ms.
+    // Bounded to [50, 2000] ms — anything below 50 ms is implausible and any
+    // threshold above 2000 ms exceeds the standard 1250 ms response window.
+    state.params.nt_threshold_ms = boundedNumberParam(
+      p, 'nt_threshold_ms', DEFAULTS.nt_threshold_ms, 50, 2000, true);
     normalizeThetaGridParams();
     if (state.params.min_items > state.params.max_items) {
       state.params.min_items = state.params.max_items;
     }
-    if (state.delivery === 'fixed40') {
-      state.params.min_items = APP_CONFIG.fixedPerCondition * 2;
-      state.params.max_items = APP_CONFIG.fixedPerCondition * 2;
-      state.stopRule = 'fixed_length';
-    } else if (state.delivery === 'adaptive') {
+    if (state.delivery === 'adaptive') {
       state.algorithm = normalizeAlgorithm(p.get('algorithm') || APP_CONFIG.defaultAlgorithm);
       state.stopRule = normalizeStopRule(p.get('stop_rule') || APP_CONFIG.defaultStopRule);
       const adaptiveBounds = adaptiveItemBounds();
@@ -839,9 +760,7 @@
 
   function applyLanguage () {
     document.documentElement.lang = state.lang;
-    document.title = state.delivery === 'fixed40'
-      ? t('documentTitleFixed')
-      : state.delivery === 'adaptive'
+    document.title = state.delivery === 'adaptive'
       ? t('documentTitleAdaptive')
       : t('appTitle');
     document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -938,8 +857,7 @@
   }
 
   function normalizeDelivery (raw) {
-    const value = String(raw || '').trim().toLowerCase();
-    return value === 'adaptive' ? 'adaptive' : 'fixed40';
+    return 'adaptive';
   }
 
   function adaptiveItemBounds () {
@@ -962,8 +880,8 @@
   function deliveryPathname (pathname, delivery) {
     const target = normalizeDelivery(delivery);
     const replacement = '/' + target + '/';
-    if (/\/(fixed40|adaptive)(\/index\.html)?\/?$/.test(pathname)) {
-      return pathname.replace(/\/(fixed40|adaptive)(\/index\.html)?\/?$/, replacement);
+    if (/\/adaptive(\/index\.html)?\/?$/.test(pathname)) {
+      return pathname.replace(/\/adaptive(\/index\.html)?\/?$/, replacement);
     }
     if (/\/index\.html\/?$/.test(pathname)) {
       return pathname.replace(/\/index\.html\/?$/, replacement);
@@ -1026,6 +944,13 @@
       10,
       true
     );
+    const ntThresholdMs = boundedNumberValue(
+      opts.nt_threshold_ms === undefined ? state.params.nt_threshold_ms : opts.nt_threshold_ms,
+      DEFAULTS.nt_threshold_ms,
+      50,
+      2000,
+      true
+    );
     const pace = normalizePace(opts.pace || state.params.pace || DEFAULTS.pace);
     const keymap = normalizeKeymap(opts.keymap || state.params.keymap);
     let thetaMin = boundedNumberValue(
@@ -1067,6 +992,7 @@
     u.searchParams.delete('self_paced');
     u.searchParams.set('max_condition_run', String(maxRun));
     u.searchParams.set('max_play_fails', String(maxFails));
+    u.searchParams.set('nt_threshold_ms', String(ntThresholdMs));
     u.searchParams.set('keymap', keymap);
     u.searchParams.set('theta_min', String(thetaMin));
     u.searchParams.set('theta_max', String(thetaMax));
@@ -1510,10 +1436,6 @@
   }
 
   function createCATSession () {
-    if (state.delivery === 'fixed40') {
-      state.fixedItems = buildFixed40Items();
-      return createFixedSession(state.fixedItems);
-    }
     if (state.delivery === 'adaptive') {
       const pools = buildAdaptivePools();
       const bp = adaptiveBlueprint();
@@ -1549,91 +1471,6 @@
     return window.CAT2F.create(state.calibration.item_bank_2f, rho, thetaGrid2DOptions());
   }
 
-  function buildFixed40Items () {
-    const selected = getSelectedForm('fixed40_disjoint');
-    if (selected && selected.items && selected.items.length) {
-      const rows = itemsFromSelectedForm(selected);
-      const hit = rows.filter(it => it.condition === 'Hit')
-        .sort((a, b) => a.rank - b.rank);
-      const cr = rows.filter(it => it.condition === 'CR')
-        .sort((a, b) => a.rank - b.rank);
-      const out = [];
-      const maxRun = maxConditionRun();
-      const schedule = buildBalancedConditionSchedule(hit.length, cr.length, maxRun);
-      state.fixedConditionSchedule = schedule.slice();
-      let ih = 0;
-      let ic = 0;
-      for (let i = 0; i < schedule.length; i++) {
-        if (schedule[i] === 'Hit' && hit[ih]) out.push(hit[ih++]);
-        if (schedule[i] === 'CR' && cr[ic]) out.push(cr[ic++]);
-      }
-      return out;
-    }
-
-    const n = APP_CONFIG.fixedPerCondition || 20;
-    const topHit = state.calibration.item_bank_hit
-      .slice().sort((a, b) => b.a - a.a).slice(0, n)
-      .map(it => Object.assign({ item_id: mkItemId(it) }, it));
-    const topCR = state.calibration.item_bank_cr
-      .slice().sort((a, b) => b.a - a.a).slice(0, n)
-      .map(it => Object.assign({ item_id: mkItemId(it) }, it));
-    const out = [];
-    const maxRun = maxConditionRun();
-    const schedule = buildBalancedConditionSchedule(topHit.length, topCR.length, maxRun);
-    state.fixedConditionSchedule = schedule.slice();
-    let ih = 0;
-    let ic = 0;
-    for (let i = 0; i < schedule.length; i++) {
-      if (schedule[i] === 'Hit' && topHit[ih]) out.push(topHit[ih++]);
-      if (schedule[i] === 'CR' && topCR[ic]) out.push(topCR[ic++]);
-    }
-    return out;
-  }
-
-  function createFixedSession (items) {
-    const used = new Set();
-    const log = [];
-    function nextSequentialIndex () {
-      for (let i = 0; i < items.length; i++) {
-        if (!used.has(i)) return i;
-      }
-      return -1;
-    }
-    function logRow (idx, correct, extra, skipped) {
-      used.add(idx);
-      const it = items[idx];
-      log.push(Object.assign({
-        step: log.length + 1,
-        item_index: idx,
-        item_id: it.item_id,
-        targetword: it.targetword,
-        condition: it.condition,
-        stimuli: it.stimuli,
-        ANSWER: it.ANSWER,
-        correct: correct,
-        a: it.a,
-        b: it.b,
-        theta_after: null,
-        se_after: null,
-        item_info: null,
-        skipped: !!skipped
-      }, extra || {}));
-    }
-    return {
-      selectNext: () => {
-        const idx = nextSequentialIndex();
-        return idx >= 0 ? { index: idx, info: null, theta: null, se: null } : null;
-      },
-      update: (idx, correct, extra) => logRow(idx, correct, extra, false),
-      markUsed: (idx, extra) => logRow(idx, null, extra, true),
-      currentTheta: () => NaN,
-      currentSE: () => Infinity,
-      usedCount: () => used.size,
-      finalize: () => ({ theta: NaN, se: NaN, n_items: used.size, log: log.slice() }),
-      mode: 'fixed40'
-    };
-  }
-
   function escapeHtml (value) {
     return String(value === null || value === undefined ? '' : value)
       .replace(/&/g, '&amp;')
@@ -1659,17 +1496,10 @@
 
   function researchItemRows () {
     if (!state.calibration) return [];
-    let candidateSet = 'fixed40_disjoint';
-    let form = getSelectedForm('fixed40_disjoint');
-    let source = form && form.items && form.items.length
-      ? itemsFromSelectedForm(form)
-      : [];
-    if (state.delivery === 'adaptive') {
-      const adaptiveSource = adaptiveCandidateSource();
-      candidateSet = adaptiveSource.candidateSet;
-      form = adaptiveSource.form;
-      source = adaptiveSource.items;
-    }
+    const adaptiveSource = adaptiveCandidateSource();
+    const candidateSet = adaptiveSource.candidateSet;
+    const form = adaptiveSource.form;
+    const source = adaptiveSource.items;
     return source.slice()
       .sort((a, b) => {
         if (a.condition !== b.condition) return a.condition === 'Hit' ? -1 : 1;
@@ -1744,7 +1574,6 @@
   }
 
   function bindResearchPanelControls () {
-    const deliveryEl = $('research-delivery-mode');
     const timingEl = $('research-timing-mode');
     const presetEl = $('research-window-preset');
     const customEl = $('research-window-custom');
@@ -1778,10 +1607,8 @@
     if (!timingEl || !presetEl || !customEl || !urlEl) return;
 
     const readOverrides = () => {
-      const delivery = normalizeDelivery(deliveryEl ? deliveryEl.value : state.delivery);
-      const targetAdaptive = delivery === 'adaptive';
       return {
-        delivery: delivery,
+        delivery: 'adaptive',
         timing: timingEl.value,
         response_window_ms: presetEl.value === 'custom' ? customEl.value : presetEl.value,
         keymap: keymapEl ? keymapEl.value : state.params.keymap,
@@ -1800,8 +1627,8 @@
         theta2_step: theta2StepEl ? theta2StepEl.value : state.params.theta2_step,
         algorithm: algorithmEl ? algorithmEl.value : 'blueprint',
         stop_rule: stopRuleEl ? stopRuleEl.value : 'blueprint_pser',
-        min_items: minItemsEl ? minItemsEl.value : (targetAdaptive ? DEFAULTS.min_items : state.params.min_items),
-        max_items: maxItemsEl ? maxItemsEl.value : (targetAdaptive ? DEFAULTS.max_items : state.params.max_items),
+        min_items: minItemsEl ? minItemsEl.value : DEFAULTS.min_items,
+        max_items: maxItemsEl ? maxItemsEl.value : DEFAULTS.max_items,
         target_se: targetSeEl ? targetSeEl.value : DEFAULTS.target_se,
         stop_pser: stopPserEl ? stopPserEl.value : DEFAULTS.stop_pser,
         quota_tol: quotaTolEl ? quotaTolEl.value : DEFAULTS.quota_tol
@@ -1832,7 +1659,6 @@
       urlEl.value = buildProtocolURL(false, overrides);
     };
 
-    if (deliveryEl) deliveryEl.addEventListener('change', refreshControls);
     timingEl.addEventListener('change', refreshControls);
     presetEl.addEventListener('change', refreshControls);
     customEl.addEventListener('input', refreshControls);
@@ -1848,15 +1674,6 @@
     if (applyEl) {
       applyEl.addEventListener('click', () => {
         const overrides = readOverrides();
-        if (normalizeDelivery(overrides.delivery) !== state.delivery) {
-          logEvent('research_protocol_mode_switch', {
-            from_delivery: state.delivery,
-            to_delivery: overrides.delivery,
-            participant_url: buildProtocolURL(false, overrides)
-          });
-          updateURLFromProtocol(true, overrides);
-          return;
-        }
         state.params.timing = normalizeTiming(overrides.timing);
         if (state.params.timing === 'timed') {
           state.params.response_window_ms = boundedNumberValue(
@@ -2000,21 +1817,15 @@
       return;
     }
 
-    const adaptiveSource = state.delivery === 'adaptive' ? adaptiveCandidateSource() : null;
-    const form = state.delivery === 'fixed40'
-      ? getSelectedForm('fixed40_disjoint')
-      : adaptiveSource.form;
+    const adaptiveSource = adaptiveCandidateSource();
+    const form = adaptiveSource.form;
     const rows = researchItemRows();
     const itemSummary = summarizeResearchItems(rows);
     const timing = isTimed()
       ? t('researchTimedValue', { ms: responseWindowMs() })
       : t('researchUntimedValue');
-    const model = state.delivery === 'adaptive'
-      ? 'full 160-item per-condition 1D 2PL blueprint CAT (mod_hit / mod_cr)'
-      : 'per-condition 1D 2PL disjoint fixed form (mod_hit / mod_cr)';
-    const note = state.delivery === 'adaptive'
-      ? t('researchAdaptiveNote')
-      : t('researchFixedNote');
+    const model = 'full 160-item per-condition 1D 2PL blueprint CAT (mod_hit / mod_cr)';
+    const note = t('researchAdaptiveNote');
     const preset = responseWindowPreset();
     const currentWindow = responseWindowMs() || DEFAULTS.response_window_ms;
     const keymap = normalizeKeymap(state.params.keymap);
@@ -2097,12 +1908,7 @@
         '<p class="research-model">' + escapeHtml(t('researchProtocolNote')) + '</p>' +
         '<div class="research-control-grid">' +
           '<label><span>' + escapeHtml(t('researchDeliveryModeLabel')) + '</span>' +
-            '<select id="research-delivery-mode">' +
-              '<option value="fixed40"' + (state.delivery === 'fixed40' ? ' selected' : '') + '>' +
-                escapeHtml(t('researchFixed40Option')) + '</option>' +
-              '<option value="adaptive"' + (state.delivery === 'adaptive' ? ' selected' : '') + '>' +
-                escapeHtml(t('researchAdaptiveOption')) + '</option>' +
-            '</select></label>' +
+            '<output>' + escapeHtml(t('researchAdaptiveOption')) + '</output></label>' +
           '<label><span>' + escapeHtml(t('researchTimingModeLabel')) + '</span>' +
             '<select id="research-timing-mode">' +
               '<option value="timed"' + (isTimed() ? ' selected' : '') + '>' +
@@ -2695,11 +2501,6 @@
 
   function shouldStop () {
     const n = state.cat.usedCount();
-    if (state.delivery === 'fixed40') {
-      return n >= state.params.max_items
-        ? { stop: true, reason: 'fixed_length' }
-        : { stop: false };
-    }
     if (n >= state.params.max_items) return { stop: true, reason: 'max_items' };
     if (n === 0) return { stop: false };
     if (n < state.params.min_items) return { stop: false };
@@ -2745,13 +2546,11 @@
     if (s2.stop) return finishMain(s2.reason);
     state.currentItemRef = sel;
 
-    const it = state.delivery === 'fixed40'
-      ? state.fixedItems[sel.index]
-      : (state.delivery === 'adaptive'
-          ? state.adaptiveItems[sel.index]
+    const it = state.delivery === 'adaptive'
+      ? state.adaptiveItems[sel.index]
       : (state.mode === '1F'
           ? state.calibration.item_bank_1f[sel.index]
-          : state.calibration.item_bank_2f[sel.index]));
+          : state.calibration.item_bank_2f[sel.index]);
     state.currentTrialContext = {
       phase: 'main',
       step: state.cat.usedCount() + 1,
@@ -2875,12 +2674,18 @@
    * Post-CAT per-condition scoring.
    * Separates administered items into Hit / CR subsets and runs
    * condition-specific EAP on the per-condition banks.
+   *
+   * If `ntThresholdMs` is provided (>0), trials with rt_ms < ntThresholdMs
+   * are filtered out (Wise & DeMars 2006 effort-moderated scoring).
+   * The filtered output is auxiliary; the live CAT engine still uses
+   * unfiltered responses, and the calibration (`mod_hit.rds` / `mod_cr.rds`)
+   * was fitted on RT in [200, 10000] ms (no rapid-guess removal). Therefore
+   * NT-filtered scores are a "naive-calibration + filtered-scoring" hybrid;
+   * see README §Auxiliary NT-filtered scoring for rationale.
    */
-  function perConditionScore (catLog) {
+  function perConditionScore (catLog, ntThresholdMs) {
     const hitBank = state.calibration.item_bank_hit;
     const crBank  = state.calibration.item_bank_cr;
-    // Build item arrays keyed by item_id = targetword (per-condition bank uses
-    // bare targetword as identifier).
     const hitItemsWithIds = hitBank.map(it => ({
       item_id:    it.targetword,
       a: it.a, b: it.b, targetword: it.targetword
@@ -2890,20 +2695,32 @@
       a: it.a, b: it.b, targetword: it.targetword
     }));
 
-    // Remap catLog responses to targetword keys
+    const useNT = Number.isFinite(ntThresholdMs) && ntThresholdMs > 0;
     const hitResp = {}, crResp = {};
+    let nFlaggedHit = 0, nFlaggedCR = 0;
+    let nValidHit = 0,   nValidCR = 0;
     catLog.forEach(row => {
       if (row.correct !== 0 && row.correct !== 1) return;
-      if (row.condition === 'Hit') hitResp[row.targetword] = row.correct;
-      else                         crResp[row.targetword]  = row.correct;
+      const flagged = useNT &&
+                      Number.isFinite(row.rt_ms) &&
+                      row.rt_ms < ntThresholdMs;
+      if (row.condition === 'Hit') {
+        if (flagged) nFlaggedHit++; else { hitResp[row.targetword] = row.correct; nValidHit++; }
+      } else {
+        if (flagged) nFlaggedCR++; else { crResp[row.targetword]  = row.correct; nValidCR++; }
+      }
     });
 
     const hitScore = window.CAT1F.scoreSubset(hitItemsWithIds, hitResp, thetaGrid1DOptions());
     const crScore  = window.CAT1F.scoreSubset(crItemsWithIds,  crResp, thetaGrid1DOptions());
-    return { hit: hitScore, cr: crScore };
+    return {
+      hit: hitScore, cr: crScore,
+      n_flagged_hit: nFlaggedHit, n_flagged_cr: nFlaggedCR,
+      n_valid_hit: nValidHit,     n_valid_cr: nValidCR
+    };
   }
 
-  function scorePostHoc2F (catLog) {
+  function scorePostHoc2F (catLog, ntThresholdMs) {
     const rho = state.calibration.regression.factor_cor_2F;
     const items2F = state.calibration.item_bank_2f.map(it => ({
       item_id: it.item_id,
@@ -2911,9 +2728,14 @@
       a2: it.a2,
       d: it.d
     }));
+    const useNT = Number.isFinite(ntThresholdMs) && ntThresholdMs > 0;
     const responses = {};
     catLog.forEach(row => {
-      if (row.correct === 0 || row.correct === 1) responses[row.item_id] = row.correct;
+      if (row.correct !== 0 && row.correct !== 1) return;
+      const flagged = useNT &&
+                      Number.isFinite(row.rt_ms) &&
+                      row.rt_ms < ntThresholdMs;
+      if (!flagged) responses[row.item_id] = row.correct;
     });
     return window.CAT2F.scoreSubset(items2F, responses, rho, thetaGrid2DOptions());
   }
@@ -3050,7 +2872,6 @@
   }
 
   function buildProtocolManifest () {
-    const fixedForm = getSelectedForm('fixed40_disjoint');
     const adaptiveSource = state.delivery === 'adaptive' ? adaptiveCandidateSource() : null;
     const adaptiveForm = adaptiveSource ? adaptiveSource.form : null;
     return {
@@ -3118,8 +2939,22 @@
         stop_pser: state.params.stop_pser,
         quota_tol: state.params.quota_tol
       },
+      // Auxiliary NT-filtered scoring config (Wise & Ma 2012; Wise & Kong 2005;
+      // Wise & DeMars 2006). Live theta is NOT modified — auxiliary fields
+      // theta_*_<NT_TAG> are added to summary alongside the standard naive
+      // theta_hit / theta_cr / theta_mirt_*. Calibration was fitted on RT in
+      // [200, 10000] ms with NO rapid-guess removal, so these auxiliary scores
+      // are explicitly a "naive-calibration + filtered-scoring" hybrid.
+      auxiliary_nt_scoring: {
+        nt_threshold_ms: state.params.nt_threshold_ms,
+        default_threshold_ms: DEFAULTS.nt_threshold_ms,
+        scoring_pipeline: 'Wise & DeMars (2006) effort-moderated: trials with rt_ms < nt_threshold_ms excluded from EAP re-scoring',
+        rte_definition: 'Wise & Kong (2005): RTE = 1 − (#flagged / #answered) per condition',
+        calibration_alignment: 'Hybrid: calibration mod_hit / mod_cr were fitted on RT in [200, 10000] ms WITHOUT rapid-guess removal. Auxiliary NT-filtered scores apply a stricter threshold at scoring time only.',
+        affects_live_theta: false,
+        affects_stopping_rule: false
+      },
       selected_forms: {
-        fixed40: fixedForm ? fixedForm.form_id : '',
         adaptive: adaptiveForm ? adaptiveForm.form_id : ''
       },
       candidate_sets: {
@@ -3272,21 +3107,43 @@
     // Combine CAT log with skip records to produce the full response list
     const allResponses = state.responses.concat(fin.log.map(r => Object.assign({}, r)));
 
-    // Per-condition scoring
+    // Per-condition scoring (naive: live theta path)
     const coverage = summarizeResponseCoverage(allResponses);
     const per = perConditionScore(allResponses);
     const mirt2f = scorePostHoc2F(allResponses);
+
+    // Auxiliary NT-filtered scoring (Wise & Ma 2012 / Wise & DeMars 2006).
+    // Provides theta_*_nt<NNN> alongside the standard naive estimates.
+    // Live theta is unaffected. Calibration was fit on RT in [200, 10000] ms
+    // without rapid-guess removal, so this is a "naive-calibration + filtered-
+    // scoring" hybrid; see README §Auxiliary NT-filtered scoring.
+    const NT_MS = state.params.nt_threshold_ms;
+    const NT_TAG = 'nt' + Math.round(NT_MS);
+    const perFilt   = perConditionScore(allResponses, NT_MS);
+    const mirt2fFilt = scorePostHoc2F(allResponses, NT_MS);
+
+    // Per-condition Response Time Effort (Wise & Kong 2005).
+    // RTE = 1 - (#flagged / #answered); range [0, 1], 1 = no rapid trials.
+    const _rteCount = (cond) => {
+      let answered = 0, flagged = 0;
+      allResponses.forEach(row => {
+        if (row.condition !== cond) return;
+        if (row.correct !== 0 && row.correct !== 1) return;
+        answered++;
+        if (Number.isFinite(row.rt_ms) && row.rt_ms < NT_MS) flagged++;
+      });
+      return answered > 0 ? 1 - (flagged / answered) : null;
+    };
+    const rteHit = _rteCount('Hit');
+    const rteCR  = _rteCount('CR');
 
     // Reporting is valid only when both condition-specific posteriors have
     // observed responses. Adaptive no longer has a 40-item stopping floor, but
     // this guard prevents an unobserved condition from silently using the prior
     // theta = 0 / SE = 1 in computeTOEICEstimate().
-    const MIN_PER_CONDITION =
-      state.delivery === 'fixed40'
-        ? Math.floor(state.params.min_items / 2)
-        : state.delivery === 'adaptive'
-          ? adaptiveReportingMinPerCondition()
-          : 3;
+    const MIN_PER_CONDITION = state.delivery === 'adaptive'
+      ? adaptiveReportingMinPerCondition()
+      : 3;
     const enoughTotal       = coverage.answered >= state.params.min_items;
     const enoughHit         = coverage.hit.answered >= MIN_PER_CONDITION;
     const enoughCR          = coverage.cr.answered  >= MIN_PER_CONDITION;
@@ -3300,6 +3157,14 @@
     const toeic = validForReporting ? computeTOEICEstimate(per) : null;
     const toeic2f = validForReporting ? computeTOEICEstimate2F(mirt2f) : null;
     const behavior = summarizeResponseBehavior(allResponses, per, validForReporting);
+
+    // NT-filtered TOEIC estimates: valid only when both filtered conditions
+    // retain at least MIN_PER_CONDITION items (otherwise prior leaks in).
+    const enoughHitFilt = perFilt.n_valid_hit >= MIN_PER_CONDITION;
+    const enoughCRFilt  = perFilt.n_valid_cr  >= MIN_PER_CONDITION;
+    const validFiltReport = validForReporting && enoughHitFilt && enoughCRFilt;
+    const toeicFilt   = validFiltReport ? computeTOEICEstimate(perFilt) : null;
+    const toeic2fFilt = validFiltReport ? computeTOEICEstimate2F(mirt2fFilt) : null;
 
     // Percentile from predicted-TOEIC reference distribution
     const refTOEIC = state.calibration.reference_predicted_toeic;
@@ -3361,6 +3226,52 @@
       toeic_estimate_2f_se: toeic2f ? round2(toeic2f.se) : null
     };
 
+    // ===== Auxiliary NT-filtered scoring (Wise & Ma 2012) =====
+    // Dynamic column tag, e.g. nt350 (default) or nt500 (low-proficiency
+    // population, configurable via ?nt_threshold_ms=NNN). Live theta is NOT
+    // adjusted; these auxiliary fields let researchers compare naive vs
+    // effort-moderated estimates post-hoc. See README §Auxiliary NT-filtered
+    // scoring for the calibration-mismatch caveat.
+    finalObj.nt_threshold_ms = NT_MS;
+    finalObj['theta_hit_' + NT_TAG] =
+      (validFiltReport && Number.isFinite(perFilt.hit.theta)) ? round6(perFilt.hit.theta) : null;
+    finalObj['se_hit_' + NT_TAG] =
+      (validFiltReport && Number.isFinite(perFilt.hit.se))    ? round6(perFilt.hit.se)    : null;
+    finalObj['theta_cr_' + NT_TAG] =
+      (validFiltReport && Number.isFinite(perFilt.cr.theta))  ? round6(perFilt.cr.theta)  : null;
+    finalObj['se_cr_' + NT_TAG] =
+      (validFiltReport && Number.isFinite(perFilt.cr.se))     ? round6(perFilt.cr.se)     : null;
+    finalObj['theta_mirt_f1_' + NT_TAG] =
+      (validFiltReport && Number.isFinite(mirt2fFilt.theta1)) ? round6(mirt2fFilt.theta1) : null;
+    finalObj['se_mirt_f1_' + NT_TAG] =
+      (validFiltReport && Number.isFinite(mirt2fFilt.se1))    ? round6(mirt2fFilt.se1)    : null;
+    finalObj['theta_mirt_f2_' + NT_TAG] =
+      (validFiltReport && Number.isFinite(mirt2fFilt.theta2)) ? round6(mirt2fFilt.theta2) : null;
+    finalObj['se_mirt_f2_' + NT_TAG] =
+      (validFiltReport && Number.isFinite(mirt2fFilt.se2))    ? round6(mirt2fFilt.se2)    : null;
+    finalObj['toeic_estimate_' + NT_TAG] =
+      toeicFilt ? round2(toeicFilt.estimate) : null;
+    finalObj['toeic_estimate_se_' + NT_TAG] =
+      toeicFilt ? round2(toeicFilt.se) : null;
+    finalObj['toeic_estimate_2f_' + NT_TAG] =
+      toeic2fFilt ? round2(toeic2fFilt.estimate) : null;
+    finalObj['toeic_estimate_2f_se_' + NT_TAG] =
+      toeic2fFilt ? round2(toeic2fFilt.se) : null;
+    // RTE (Wise & Kong 2005) and per-condition flag counts
+    finalObj.rte_hit = rteHit !== null ? round6(rteHit) : null;
+    finalObj.rte_cr  = rteCR  !== null ? round6(rteCR)  : null;
+    finalObj.n_flagged_nt_hit = perFilt.n_flagged_hit;
+    finalObj.n_flagged_nt_cr  = perFilt.n_flagged_cr;
+    finalObj.n_valid_after_nt_hit = perFilt.n_valid_hit;
+    finalObj.n_valid_after_nt_cr  = perFilt.n_valid_cr;
+    // Status of the auxiliary scoring path
+    finalObj.nt_filtered_scoring_status =
+      validFiltReport ? 'ok'
+        : (!validForReporting ? 'session_invalid'
+           : (!enoughHitFilt && !enoughCRFilt ? 'insufficient_both_after_nt'
+              : (!enoughHitFilt ? 'insufficient_hit_after_nt'
+                                 : 'insufficient_cr_after_nt')));
+
     // Session meta
     state.session.user_agent = navigator.userAgent;
     state.session.calibration_version = state.calibration.version || 'unknown';
@@ -3371,9 +3282,6 @@
     state.session.reg = state.calibration.regression.per_condition;
     state.session.reg_2f = state.calibration.regression['2F'];
     state.session.reference_n = refTOEIC.length;
-    state.session.selected_form_fixed40 = getSelectedForm('fixed40_disjoint')
-      ? getSelectedForm('fixed40_disjoint').form_id
-      : '';
     const adaptiveSource = state.delivery === 'adaptive' ? adaptiveCandidateSource() : null;
     state.session.selected_form_adaptive = adaptiveSource
       ? (adaptiveSource.form ? adaptiveSource.form.form_id : adaptiveSource.candidateSet)
@@ -3381,12 +3289,8 @@
     state.session.adaptive_candidate_set = adaptiveSource ? adaptiveSource.candidateSet : '';
     state.session.item_selection_model = state.delivery === 'adaptive'
       ? 'full 160-item per-condition 1D 2PL ' + state.algorithm + ' CAT (mod_hit / mod_cr)'
-      : state.delivery === 'fixed40'
-      ? 'per-condition 1D 2PL disjoint fixed form (mod_hit / mod_cr)'
       : 'legacy combined 1F / 2F research mode';
-    state.session.presentation_order_policy = state.delivery === 'fixed40'
-      ? 'balanced_random_condition_order'
-      : state.delivery === 'adaptive'
+    state.session.presentation_order_policy = state.delivery === 'adaptive'
       ? state.algorithm + '_random_tie_condition_order_full160'
       : 'model_selected_condition_order';
     state.session.max_condition_run = maxConditionRun();
@@ -3409,6 +3313,11 @@
     state.session.theta2_grid_points = thetaGrid2DPointCount();
     state.session.timing_mode = state.params.timing;
     state.session.response_window_ms = responseWindowMs();
+    // NT-filtered auxiliary scoring config (Wise & Ma 2012). Live theta is
+    // not affected; theta_*_<NT_TAG> columns are written alongside naive theta_*.
+    state.session.nt_threshold_ms = state.params.nt_threshold_ms;
+    state.session.nt_tag = NT_TAG;
+    state.session.nt_filtered_scoring_status = finalObj.nt_filtered_scoring_status;
     state.session.response_keymap_id = state.responseMapping ? state.responseMapping.keymap_id : '';
     state.session.response_key_appropriate = state.responseMapping
       ? state.responseMapping.appropriate_key
@@ -3416,11 +3325,9 @@
     state.session.response_key_inappropriate = state.responseMapping
       ? state.responseMapping.inappropriate_key
       : '';
-    state.session.backbone_model = state.delivery === 'fixed40'
-      ? 'fixed40_disjoint_balanced_short_form'
-      : (state.delivery === 'adaptive'
-          ? 'full160_per_condition_1d_2pl_' + state.algorithm
-          : (state.mode === '1F' ? 'combined_1f_2pl' : 'compensatory_2f_mirt'));
+    state.session.backbone_model = state.delivery === 'adaptive'
+      ? 'full160_per_condition_1d_2pl_' + state.algorithm
+      : (state.mode === '1F' ? 'combined_1f_2pl' : 'compensatory_2f_mirt');
     state.session.min_answered_required = state.params.min_items;
     state.session.min_answered_per_condition_required = MIN_PER_CONDITION;
     state.session.delivery = state.delivery;

@@ -54,9 +54,6 @@
   }
 
   function scoringBackboneDescription (session) {
-    if (session.mode === 'fixed40') {
-      return 'Fixed form: validated no-overlap 20 Hit + 20 CR form selected from mod_hit / mod_cr per-condition 1D 2PL; theta_hit/theta_cr: mod_hit / mod_cr; 2F output = post-hoc confirmatory MIRT';
-    }
     if (session.mode === '1F') {
       const algorithm = session.algorithm || 'blueprint';
       const candidateSet = session.adaptive_candidate_set || session.selected_form_adaptive || 'full160_item_bank';
@@ -211,12 +208,57 @@
       app_version:          payload.session.app_version,
       calibration_version:  payload.session.calibration_version
     }];
+
+    // Auxiliary NT-filtered scoring (Wise & Ma 2012). Live theta is unaffected.
+    // Column tag is dynamic based on the actual NT threshold (e.g. nt350 / nt500).
+    // Calibration was fitted on RT in [200, 10000] ms without rapid-guess
+    // removal, so these are "naive-calibration + filtered-scoring" hybrids;
+    // see README §Auxiliary NT-filtered scoring.
+    if (payload.session && Number.isFinite(payload.session.nt_threshold_ms)) {
+      const ntTag = payload.session.nt_tag ||
+                    ('nt' + Math.round(payload.session.nt_threshold_ms));
+      const finalSrc = payload.final || {};
+      const ntCols = {
+        nt_threshold_ms:                 payload.session.nt_threshold_ms,
+        nt_filtered_scoring_status:      finalSrc.nt_filtered_scoring_status,
+        rte_hit:                         finalSrc.rte_hit,
+        rte_cr:                          finalSrc.rte_cr,
+        n_flagged_nt_hit:                finalSrc.n_flagged_nt_hit,
+        n_flagged_nt_cr:                 finalSrc.n_flagged_nt_cr,
+        n_valid_after_nt_hit:            finalSrc.n_valid_after_nt_hit,
+        n_valid_after_nt_cr:             finalSrc.n_valid_after_nt_cr
+      };
+      ntCols['theta_hit_' + ntTag]               = finalSrc['theta_hit_' + ntTag];
+      ntCols['se_hit_' + ntTag]                  = finalSrc['se_hit_' + ntTag];
+      ntCols['theta_cr_' + ntTag]                = finalSrc['theta_cr_' + ntTag];
+      ntCols['se_cr_' + ntTag]                   = finalSrc['se_cr_' + ntTag];
+      ntCols['theta_mirt_f1_' + ntTag]           = finalSrc['theta_mirt_f1_' + ntTag];
+      ntCols['se_mirt_f1_' + ntTag]              = finalSrc['se_mirt_f1_' + ntTag];
+      ntCols['theta_mirt_f2_' + ntTag]           = finalSrc['theta_mirt_f2_' + ntTag];
+      ntCols['se_mirt_f2_' + ntTag]              = finalSrc['se_mirt_f2_' + ntTag];
+      ntCols['toeic_estimate_' + ntTag]          = finalSrc['toeic_estimate_' + ntTag];
+      ntCols['toeic_estimate_se_' + ntTag]       = finalSrc['toeic_estimate_se_' + ntTag];
+      ntCols['toeic_estimate_2f_' + ntTag]       = finalSrc['toeic_estimate_2f_' + ntTag];
+      ntCols['toeic_estimate_2f_se_' + ntTag]    = finalSrc['toeic_estimate_2f_se_' + ntTag];
+      Object.assign(summary[0], ntCols);
+    }
+
     XLSX.utils.book_append_sheet(wb,
       XLSX.utils.json_to_sheet(summary), 'summary');
 
     // --- Sheet 2: responses ---
+    // Augment per-trial rows with `flagged_nt` (rt_ms < nt_threshold_ms).
+    // This mirrors the auxiliary scoring path so researchers can audit
+    // exactly which trials were excluded from the NT-filtered θ.
+    const ntMs = payload.session && Number.isFinite(payload.session.nt_threshold_ms)
+      ? payload.session.nt_threshold_ms : null;
+    const responsesAugmented = (payload.responses || []).map(row => {
+      const rt = Number(row && row.rt_ms);
+      const flagged = (ntMs !== null && Number.isFinite(rt)) ? (rt < ntMs) : null;
+      return Object.assign({}, row, { flagged_nt: flagged });
+    });
     XLSX.utils.book_append_sheet(wb,
-      XLSX.utils.json_to_sheet(payload.responses || []), 'responses');
+      XLSX.utils.json_to_sheet(responsesAugmented), 'responses');
 
     // --- Sheet 3: practice ---
     XLSX.utils.book_append_sheet(wb,
@@ -257,9 +299,7 @@
       { key: 'language',            value: payload.session.language || '' },
       { key: 'research_mode',       value: !!payload.session.research_mode },
       { key: 'theta_grid',
-        value: payload.session.mode === 'fixed40'
-          ? thetaGridLabel + ' (fixed 40-item balanced short form)'
-          : payload.session.mode === '1F'
+        value: payload.session.mode === '1F'
           ? thetaGridLabel
           : theta2GridLabel },
       { key: 'stopping_rule',
@@ -280,8 +320,6 @@
         value: payload.session.backbone_model || '' },
       { key: 'item_selection_model',
         value: payload.session.item_selection_model || '' },
-      { key: 'selected_form_fixed40',
-        value: payload.session.selected_form_fixed40 || '' },
       { key: 'selected_form_adaptive',
         value: payload.session.selected_form_adaptive || '' },
       { key: 'presentation_order_policy',
@@ -324,6 +362,17 @@
         value: payload.session.timing_mode || '' },
       { key: 'response_window_ms',
         value: payload.session.response_window_ms },
+      // NT (Normative Threshold) for auxiliary rapid-guessing-aware theta
+      // (Wise & Ma 2012 / Wise & DeMars 2006 / Wise & Kong 2005). Live theta
+      // is unaffected. Calibration was fitted on RT in [200, 10000] ms with
+      // no rapid-guess removal; auxiliary scores are therefore "naive
+      // calibration + filtered scoring" hybrids — see README.
+      { key: 'nt_threshold_ms',
+        value: payload.session.nt_threshold_ms },
+      { key: 'nt_filter_method',
+        value: 'Wise & DeMars (2006) effort-moderated: trials with rt_ms < nt_threshold_ms are excluded; auxiliary theta_*_<NT_TAG> are computed via the same per-condition / 2F EAP pipeline. Calibration NOT re-fitted with rapid-guess removal — flagged as a "naive-calibration + filtered-scoring" hybrid for transparency.' },
+      { key: 'nt_filtered_scoring_status',
+        value: payload.session.nt_filtered_scoring_status || '' },
       { key: 'response_keymap_id',
         value: payload.session.response_keymap_id || '' },
       { key: 'response_key_appropriate',

@@ -42,6 +42,12 @@ window.LJT_APP_CONFIG = {
     theta_step: 0.01,
     theta2_min: -4,
     theta2_max: 4,
-    theta2_step: 0.1
+    theta2_step: 0.1,
+    // NT (Normative Threshold) for rapid-guessing-aware auxiliary scoring.
+    // Wise & Ma (2012). Default 350 ms; researchers can override via
+    // ?nt_threshold_ms=NNN, e.g. 500 ms for lower-proficiency populations.
+    // Live theta is NOT modified; auxiliary `theta_*_nt<NNN>` columns are
+    // added to summary alongside the standard naive estimates.
+    nt_threshold_ms: 350
   }
 };
