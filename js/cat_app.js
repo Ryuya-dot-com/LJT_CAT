@@ -24,6 +24,9 @@
   const APP_VERSION = '2.8.2';
   const ASSET_CACHE_VERSION = '20260428k';
   const UX_INSTRUCTION_VERSION = 'practice_instructions_20260428_refined';
+  // Captured at script-eval time so it can be reported as `code_loaded_at`
+  // build/repro metadata in the Excel output (alongside session save time).
+  const CODE_LOADED_AT = new Date().toISOString();
   const APP_CONFIG = Object.assign({
     delivery: 'landing',
     assetBase: '.',
@@ -139,6 +142,14 @@
       savedStatus: '結果ファイルを保存しました。',
       savedJsonStatus: 'Excel保存に失敗したため、JSON形式で保存しました。画面に表示されたファイル名を確認してください。',
       saveFailed: '⚠ 結果ファイルの保存に失敗しました。ページを更新して再試行してください。',
+      saveFailedActionable: '⚠ 結果ファイルの保存に複数回失敗しました。ブラウザのダウンロード許可を確認するか、研究者に連絡してください。',
+      questionCounterEstimated: '問題 {n} / 約 {median} 問',
+      orphanRecoveryTitle: '前回の未完了セッション',
+      orphanRecoveryBody: '前回終了せずに保存されなかったデータが {n} 件見つかりました。',
+      orphanRecoverySaveAll: '未完了データを保存',
+      orphanRecoveryDiscard: '破棄',
+      orphanRecoverySkip: '後で対応',
+      orphanRecoverySaved: '保存しました。新しいセッションを開始します。',
       xlsxLoadTitle: 'Excel 書き出しライブラリの読み込みに失敗しました',
       xlsxLoadBody: 'ネットワーク接続を確認してページを再読み込みしてください。再試行しても解決しない場合は研究者にご連絡ください。',
       dataLoadTitle: 'データの読み込みに失敗しました',
@@ -194,8 +205,17 @@
       researchTargetSeLabel: '目標SE',
       researchStopPserLabel: 'PSER停止しきい値',
       researchQuotaTolLabel: 'Quota許容幅',
-      researchStopPserHelp: '平均20問前後を優先する推奨値は0.01です。小さくすると出題数が増え、推定精度は上がります。',
+      researchStopPserHelp: '平均20問前後を優先する推奨値は0.01です。小さくすると出題数が増え、推定精度は上がります。出典: Morris et al. (2020) によるPSERチューニング指針。',
       researchStopPserGuide: '目安: 0.01 ≈ 平均20問、0.005 ≈ 平均34問、0.0025 ≈ 平均55問。',
+      researchStopPserOutOfRange: '値が推奨範囲(0.001–0.05)外です。',
+      researchStopRuleHelp_blueprint_pser: 'blueprint_pser: ブループリント制約付きPSER。最も推奨。',
+      researchStopRuleHelp_pser: 'pser: PSER単独。Choi et al. (2011)。',
+      researchStopRuleHelp_se: 'se: 標準誤差(SE)が target_se 未満で停止。',
+      researchStopRuleHelp_max_items: 'max_items: 固定長(max_items まで実施)。',
+      researchStopRuleAllHelp: '推奨: blueprint_pser。理論的根拠はMethodological References を参照。',
+      researchGridCostWarning1D: '⚠ 1Dグリッドが大きすぎます。step を 0.005 以上にすることを推奨します(現在の点数では計算コストが急増)。',
+      researchGridCostWarning2D: '⚠ 2Fグリッドが大きすぎます。step を 0.05 以上にすることを推奨します。',
+      researchGridCostOk: '点数は推奨範囲内です。',
       researchNumericalSettingsTitle: 'EAP数値積分・θグリッド',
       researchNumericalSettingsNote: '通常は推奨値のまま使用してください。シミュレーションでは、主スコアの0.01刻みによる数値誤差は測定誤差に比べて十分小さいことを確認済みです。',
       researchTheta1DMinLabel: '1D θ下限',
@@ -208,6 +228,28 @@
       researchTheta2DPointsLabel: '2Fグリッド点数',
       researchTheta1DHelp: '主スコア theta_hit / theta_cr とCAT項目選択に使う1D EAPグリッドです。推奨: -6〜6、0.01刻み (1201点)。',
       researchTheta2DHelp: 'Excelに保存するpost-hoc 2F MIRT補助スコア用です。推奨: -4〜4、0.1刻み (81×81点)。',
+      researchReferencesTitle: '方法論的参考文献',
+      researchReferencesIntro: 'LJT-CATの既定設定は、CAT・IRT分野の標準的方法論に基づいています。詳細はREADMEを参照してください。',
+      researchReferenceEAP: 'EAP推定 + 数値積分:',
+      researchReferenceEAPCitation: 'Bock, R. D., & Mislevy, R. J. (1982). Adaptive EAP estimation of ability in a microcomputer environment. Applied Psychological Measurement, 6(4), 431–444.',
+      researchReferenceEAPRole: 'EAPグリッド推定([-6, 6] step 0.01)の方法論的基盤。',
+      researchReferencePSER: 'PSER停止則:',
+      researchReferencePSERCitation: 'Choi, S. W., Grady, M. W., & Dodd, B. G. (2011). A new stopping rule for computerized adaptive testing. Educational and Psychological Measurement, 71(1), 37–53.',
+      researchReferencePSERRole: '既定停止則 blueprint_pser の原典。',
+      researchReferenceMorris: 'PSER閾値の最適化:',
+      researchReferenceMorrisCitation: 'Morris, S. B., Bass, M., Howard, E., & Neapolitan, R. E. (2020). Stopping rules for computer adaptive testing when item banks have nonuniform information. International Journal of Testing, 20(2), 146–168.',
+      researchReferenceMorrisRole: '既定値 stop_pser=0.01 の根拠と、項目バンク情報量が不均一な場合のチューニング指針。',
+      researchReferenceBlueprint: 'ブループリントCAT:',
+      researchReferenceBlueprintCitation: 'Wainer, H., et al. (2000). Computerized adaptive testing: A primer (2nd ed.). Lawrence Erlbaum.',
+      researchReferenceBlueprintRole: '内容バランス制約付き項目選択(blueprint)の標準参考書。',
+      researchReferenceGroupEstimation: '推定 / Estimation',
+      researchReferenceGroupStopping: '停止規則 / Stopping rules',
+      researchReferenceGroupTheory: 'CAT理論 / CAT theory',
+      researchReferenceEAPDOI: 'https://doi.org/10.1177/014662168200600405',
+      researchReferencePSERDOI: 'https://doi.org/10.1177/0013164410387338',
+      researchReferenceMorrisDOI: 'https://doi.org/10.1080/15305058.2019.1635604',
+      researchReferenceBlueprintDOI: '',
+      researchReferenceReadmeLink: '完全な参考文献リストはREADMEを参照してください。',
       researchTimedOption: 'Timed',
       researchUntimedOption: 'Untimed',
       researchWindowPresetLabel: 'Timed制限時間',
@@ -232,7 +274,11 @@
       researchSearchPlaceholder: 'targetword / 音声ファイル / item_id',
       researchConditionLabel: '条件',
       researchConditionAll: 'すべて',
-      researchVisibleRows: '表示中 {visible} / {total} 項目'
+      researchVisibleRows: '表示中 {visible} / {total} 項目',
+      researchBuildInfoTitle: 'ビルド情報',
+      researchBuildAppVersion: 'アプリバージョン',
+      researchBuildCalibrationHash: 'キャリブレーションハッシュ',
+      researchBuildAssetCacheVersion: 'アセットキャッシュ版'
     },
     en: {
       documentTitleAdaptive: 'Lexicosemantic Judgement Test',
@@ -314,6 +360,14 @@
       savedStatus: 'The result file has been saved.',
       savedJsonStatus: 'Excel export failed, so the result was saved as JSON. Check the filename shown on this screen.',
       saveFailed: '⚠ Failed to save the result file. Please reload the page and try again.',
+      saveFailedActionable: '⚠ The result file failed to save after multiple attempts. Check browser download permissions or contact the researcher.',
+      questionCounterEstimated: 'Question {n} / approximately {median}',
+      orphanRecoveryTitle: 'Incomplete previous session',
+      orphanRecoveryBody: 'Found {n} session(s) that were saved before completing.',
+      orphanRecoverySaveAll: 'Save incomplete data',
+      orphanRecoveryDiscard: 'Discard',
+      orphanRecoverySkip: 'Skip for now',
+      orphanRecoverySaved: 'Saved. Starting a new session.',
       xlsxLoadTitle: 'Failed to load the Excel export library',
       xlsxLoadBody: 'Please check the network connection and reload the page. If the problem persists, contact the researcher.',
       dataLoadTitle: 'Failed to load data',
@@ -369,8 +423,17 @@
       researchTargetSeLabel: 'Target SE',
       researchStopPserLabel: 'PSER stopping threshold',
       researchQuotaTolLabel: 'Quota tolerance',
-      researchStopPserHelp: 'The recommended value for prioritizing about 20 items on average is 0.01. Smaller values increase test length and precision.',
+      researchStopPserHelp: 'The recommended value for prioritizing about 20 items on average is 0.01. Smaller values increase test length and precision. Source: PSER tuning guidance from Morris et al. (2020).',
       researchStopPserGuide: 'Rule of thumb: 0.01 ≈ 20 items on average; 0.005 ≈ 34; 0.0025 ≈ 55.',
+      researchStopPserOutOfRange: 'Value outside recommended range (0.001–0.05).',
+      researchStopRuleHelp_blueprint_pser: 'blueprint_pser: PSER with content-blueprint constraints (recommended).',
+      researchStopRuleHelp_pser: 'pser: Plain PSER, Choi et al. (2011).',
+      researchStopRuleHelp_se: 'se: Stop when standard error reaches target_se.',
+      researchStopRuleHelp_max_items: 'max_items: Fixed length (run to max_items).',
+      researchStopRuleAllHelp: 'Recommended: blueprint_pser. See Methodological References for justification.',
+      researchGridCostWarning1D: 'Warning: the 1D grid is very large. Use step >= 0.005 to avoid runaway computation cost.',
+      researchGridCostWarning2D: 'Warning: the 2F grid is very large. Use step >= 0.05 to avoid runaway computation cost.',
+      researchGridCostOk: 'Grid size is within the recommended range.',
       researchNumericalSettingsTitle: 'EAP Integration and Theta Grid',
       researchNumericalSettingsNote: 'Use the recommended defaults unless you are doing a numerical sensitivity check. Simulations showed that the 0.01 grid for primary scores adds negligible numerical error relative to measurement error.',
       researchTheta1DMinLabel: '1D theta min',
@@ -383,6 +446,28 @@
       researchTheta2DPointsLabel: '2F grid points',
       researchTheta1DHelp: '1D EAP grid used for theta_hit / theta_cr and CAT item selection. Recommended: -6 to 6, step 0.01 (1,201 points).',
       researchTheta2DHelp: 'Grid for post-hoc 2F MIRT sensitivity scores saved in Excel. Recommended: -4 to 4, step 0.1 (81 x 81 points).',
+      researchReferencesTitle: 'Methodological References',
+      researchReferencesIntro: 'LJT-CAT defaults are grounded in standard CAT and IRT methodology. See the README for the full reference list.',
+      researchReferenceEAP: 'EAP estimation and quadrature:',
+      researchReferenceEAPCitation: 'Bock, R. D., & Mislevy, R. J. (1982). Adaptive EAP estimation of ability in a microcomputer environment. Applied Psychological Measurement, 6(4), 431–444.',
+      researchReferenceEAPRole: 'Foundation for the EAP-on-grid estimator (theta in [-6, 6], step 0.01).',
+      researchReferencePSER: 'PSER stopping rule:',
+      researchReferencePSERCitation: 'Choi, S. W., Grady, M. W., & Dodd, B. G. (2011). A new stopping rule for computerized adaptive testing. Educational and Psychological Measurement, 71(1), 37–53.',
+      researchReferencePSERRole: 'Original specification of the default `blueprint_pser` rule.',
+      researchReferenceMorris: 'PSER threshold tuning:',
+      researchReferenceMorrisCitation: 'Morris, S. B., Bass, M., Howard, E., & Neapolitan, R. E. (2020). Stopping rules for computer adaptive testing when item banks have nonuniform information. International Journal of Testing, 20(2), 146–168.',
+      researchReferenceMorrisRole: 'Empirical basis for the default stop_pser = 0.01 and tuning guidance for nonuniform item banks.',
+      researchReferenceBlueprint: 'Blueprint CAT:',
+      researchReferenceBlueprintCitation: 'Wainer, H., et al. (2000). Computerized adaptive testing: A primer (2nd ed.). Lawrence Erlbaum.',
+      researchReferenceBlueprintRole: 'Standard reference for content-balanced item selection.',
+      researchReferenceGroupEstimation: 'Estimation',
+      researchReferenceGroupStopping: 'Stopping rules',
+      researchReferenceGroupTheory: 'CAT theory',
+      researchReferenceEAPDOI: 'https://doi.org/10.1177/014662168200600405',
+      researchReferencePSERDOI: 'https://doi.org/10.1177/0013164410387338',
+      researchReferenceMorrisDOI: 'https://doi.org/10.1080/15305058.2019.1635604',
+      researchReferenceBlueprintDOI: '',
+      researchReferenceReadmeLink: 'See the README for the full reference list.',
       researchTimedOption: 'Timed',
       researchUntimedOption: 'Untimed',
       researchWindowPresetLabel: 'Timed response window',
@@ -407,7 +492,11 @@
       researchSearchPlaceholder: 'targetword / audio file / item_id',
       researchConditionLabel: 'Condition',
       researchConditionAll: 'All',
-      researchVisibleRows: 'Showing {visible} / {total} items'
+      researchVisibleRows: 'Showing {visible} / {total} items',
+      researchBuildInfoTitle: 'Build info',
+      researchBuildAppVersion: 'App version',
+      researchBuildCalibrationHash: 'Calibration hash',
+      researchBuildAssetCacheVersion: 'Asset cache version'
     }
   };
 
@@ -417,6 +506,7 @@
     labCode: '',
     params: Object.assign({}, DEFAULTS),
     calibration: null,
+    calibrationHash: '',
     stimuliList: [],
     practiceItems: [],
     lang: 'ja',
@@ -632,7 +722,7 @@
     state.params.max_play_fails = boundedNumberParam(
       p, 'max_play_fails', DEFAULTS.max_play_fails, 0, 10, true);
     state.params.stop_pser = boundedNumberParam(
-      p, 'stop_pser', DEFAULTS.stop_pser, 0, 1, false);
+      p, 'stop_pser', DEFAULTS.stop_pser, 0.0001, 0.1, false);
     state.params.quota_tol = boundedNumberParam(
       p, 'quota_tol', DEFAULTS.quota_tol, 0, 0.49, false);
     state.params.keymap = normalizeKeymap(
@@ -1034,7 +1124,7 @@
         boundedNumberValue(opts.target_se === undefined ? state.params.target_se : opts.target_se, DEFAULTS.target_se, 0.05, 2.0, false)
       ));
       u.searchParams.set('stop_pser', String(
-        boundedNumberValue(opts.stop_pser === undefined ? state.params.stop_pser : opts.stop_pser, DEFAULTS.stop_pser, 0, 1, false)
+        boundedNumberValue(opts.stop_pser === undefined ? state.params.stop_pser : opts.stop_pser, DEFAULTS.stop_pser, 0.0001, 0.1, false)
       ));
       u.searchParams.set('quota_tol', String(
         boundedNumberValue(opts.quota_tol === undefined ? state.params.quota_tol : opts.quota_tol, DEFAULTS.quota_tol, 0, 0.49, false)
@@ -1337,8 +1427,116 @@
     return r.json();
   }
 
+  // Recursively produce a canonical (sorted-key) JSON string for deterministic
+  // hashing. Mirrors the spirit of RFC 8785 (JCS) for the subset of values we
+  // actually emit: plain objects/arrays/numbers/strings/booleans/null. Required
+  // because JSON.stringify object key order is insertion-order, so two calls
+  // can disagree across browsers if the source object is reconstructed.
+  function canonicalJSONStringify (value) {
+    if (value === null || value === undefined) return 'null';
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? JSON.stringify(value) : 'null';
+    }
+    if (typeof value === 'string' || typeof value === 'boolean') {
+      return JSON.stringify(value);
+    }
+    if (Array.isArray(value)) {
+      return '[' + value.map(canonicalJSONStringify).join(',') + ']';
+    }
+    if (typeof value === 'object') {
+      const keys = Object.keys(value).sort();
+      const parts = [];
+      for (let i = 0; i < keys.length; i++) {
+        const k = keys[i];
+        parts.push(JSON.stringify(k) + ':' + canonicalJSONStringify(value[k]));
+      }
+      return '{' + parts.join(',') + '}';
+    }
+    return 'null';
+  }
+
+  async function sha256Hex (text) {
+    if (!(window.crypto && window.crypto.subtle && window.crypto.subtle.digest)) {
+      return '';
+    }
+    const enc = new TextEncoder();
+    const buf = await window.crypto.subtle.digest('SHA-256', enc.encode(text));
+    const bytes = new Uint8Array(buf);
+    let hex = '';
+    for (let i = 0; i < bytes.length; i++) {
+      const h = bytes[i].toString(16);
+      hex += h.length === 1 ? '0' + h : h;
+    }
+    return hex;
+  }
+
+  function validateCalibration (cal) {
+    if (!cal || typeof cal !== 'object') {
+      throw new Error('calibration.json: top-level value is not an object');
+    }
+    const requiredKeys = [
+      'item_bank_hit', 'item_bank_cr', 'item_bank_1f', 'item_bank_2f', 'regression'
+    ];
+    const missing = requiredKeys.filter(k => !(k in cal));
+    if (missing.length) {
+      throw new Error(
+        'calibration.json: missing required keys: ' + missing.join(', ')
+      );
+    }
+    const expectedLengths = {
+      item_bank_hit: 80,
+      item_bank_cr: 80,
+      item_bank_1f: 160,
+      item_bank_2f: 160
+    };
+    const lengthErrors = [];
+    Object.keys(expectedLengths).forEach(name => {
+      const arr = cal[name];
+      const len = Array.isArray(arr) ? arr.length : -1;
+      if (len !== expectedLengths[name]) {
+        lengthErrors.push(name + '=' + len + ' (expected ' + expectedLengths[name] + ')');
+      }
+    });
+    if (lengthErrors.length) {
+      throw new Error(
+        'calibration.json: item-bank length mismatch: ' + lengthErrors.join('; ')
+      );
+    }
+    const isFiniteNum = v => typeof v === 'number' && Number.isFinite(v);
+    const checkBank1D = (bankName, bank) => {
+      for (let i = 0; i < bank.length; i++) {
+        const it = bank[i];
+        if (!it || !isFiniteNum(it.a) || !isFiniteNum(it.b)) {
+          throw new Error(
+            'calibration.json: ' + bankName + '[' + i +
+            '] missing finite numeric a/b'
+          );
+        }
+      }
+    };
+    checkBank1D('item_bank_hit', cal.item_bank_hit);
+    checkBank1D('item_bank_cr', cal.item_bank_cr);
+    checkBank1D('item_bank_1f', cal.item_bank_1f);
+    for (let i = 0; i < cal.item_bank_2f.length; i++) {
+      const it = cal.item_bank_2f[i];
+      if (!it || !isFiniteNum(it.a1) || !isFiniteNum(it.a2) || !isFiniteNum(it.d)) {
+        throw new Error(
+          'calibration.json: item_bank_2f[' + i +
+          '] missing finite numeric a1/a2/d'
+        );
+      }
+    }
+  }
+
   async function loadCalibration () {
-    state.calibration   = await loadJSON('data/calibration.json');
+    const cal = await loadJSON('data/calibration.json');
+    validateCalibration(cal);
+    state.calibration = cal;
+    try {
+      state.calibrationHash = await sha256Hex(canonicalJSONStringify(cal));
+    } catch (err) {
+      state.calibrationHash = '';
+    }
     state.stimuliList   = await loadJSON('data/stimuli_list.json');
     state.practiceItems = await loadJSON('data/practice_items.json');
   }
@@ -1478,6 +1676,286 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  // ---- Accessibility: aria-live announcer ----
+  // The polite live region is created once at boot and reused for the rest of
+  // the app lifetime. Updates use textContent (not innerHTML) and include a
+  // brief clear-then-set toggle so identical consecutive messages are still
+  // announced by screen readers.
+  function ensureSrAnnouncer () {
+    let el = document.getElementById('sr-announcer');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'sr-announcer';
+    el.setAttribute('aria-live', 'polite');
+    el.setAttribute('aria-atomic', 'true');
+    el.setAttribute('role', 'status');
+    // Visually hide while remaining accessible to assistive tech.
+    el.style.position = 'absolute';
+    el.style.left = '-10000px';
+    el.style.top = 'auto';
+    el.style.width = '1px';
+    el.style.height = '1px';
+    el.style.overflow = 'hidden';
+    if (document.body && document.body.firstChild) {
+      document.body.insertBefore(el, document.body.firstChild);
+    } else if (document.body) {
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
+  function announceForScreenReader (message) {
+    const el = ensureSrAnnouncer();
+    if (!el) return;
+    // Clear first so identical strings re-announce on subsequent calls.
+    el.textContent = '';
+    window.setTimeout(() => { el.textContent = String(message || ''); }, 50);
+  }
+
+  // ---- Audio prefetch ----
+  // Approach chosen: per-trial JIT prefetch via a hidden secondary <audio>
+  // element. After each main response commits, we eagerly load the *current*
+  // selection's audio (if not yet loaded) and additionally warm any items the
+  // browser has already requested. We avoid bulk-injecting 160 <link
+  // rel=preload> tags because Chrome throttles concurrent media preloads and
+  // a flood of preload warnings (when items are not consumed within a few
+  // seconds) clutters the console. The per-trial approach also matches the
+  // PSER median (~20 items): the cache will be populated incrementally.
+  function ensurePrefetchAudioElement () {
+    let el = document.getElementById('audio-prefetch');
+    if (el) return el;
+    el = document.createElement('audio');
+    el.id = 'audio-prefetch';
+    el.preload = 'auto';
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+    if (document.body) document.body.appendChild(el);
+    return el;
+  }
+
+  function prefetchAudio (path) {
+    if (!path) return;
+    try {
+      const el = ensurePrefetchAudioElement();
+      if (el.src && el.src.indexOf(path) !== -1) return;
+      el.src = path;
+      // load() kicks off the network fetch without playing.
+      if (typeof el.load === 'function') el.load();
+      logEvent('audio_prefetch_start', { audio_path: path });
+      const onLoaded = () => {
+        el.removeEventListener('loadeddata', onLoaded);
+        el.removeEventListener('error', onErr);
+        logEvent('audio_prefetch_loaded', { audio_path: path });
+      };
+      const onErr = () => {
+        el.removeEventListener('loadeddata', onLoaded);
+        el.removeEventListener('error', onErr);
+        logEvent('audio_prefetch_error', { audio_path: path });
+      };
+      el.addEventListener('loadeddata', onLoaded);
+      el.addEventListener('error', onErr);
+    } catch (err) {
+      logEvent('audio_prefetch_exception', {
+        audio_path: path,
+        error_message: err && err.message ? err.message : String(err || '')
+      });
+    }
+  }
+
+  // ---- Session storage helpers (graceful degradation if module missing) ----
+  function hasSessionStorageModule () {
+    return !!(window.LJTSessionStorage &&
+      typeof window.LJTSessionStorage.snapshotSession === 'function');
+  }
+
+  function buildPartialPayload () {
+    let protocolManifest = null;
+    try { protocolManifest = buildProtocolManifest(); } catch (err) { protocolManifest = null; }
+    return {
+      partial: true,
+      participant: state.participant,
+      session: Object.assign({}, state.session, {
+        uuid:           state.session.uuid,
+        mode:           state.delivery === 'adaptive' ? state.mode : state.delivery,
+        lab_code:       state.labCode,
+        target_se:      state.params.target_se,
+        min_items:      state.params.min_items,
+        max_items:      state.params.max_items,
+        max_play_fails: state.params.max_play_fails,
+        timing_mode:    state.params.timing,
+        response_window_ms: responseWindowMs()
+      }),
+      practice:  Object.assign({}, state.practice),
+      responses: (state.responses || []).slice(),
+      events:    (state.events || []).slice(),
+      protocol_manifest: protocolManifest,
+      final:     null
+    };
+  }
+
+  function snapshotPartialSession () {
+    if (!hasSessionStorageModule()) return false;
+    if (!state.session || !state.session.uuid) return false;
+    try {
+      const payload = buildPartialPayload();
+      const ok = window.LJTSessionStorage.snapshotSession(state.session.uuid, payload);
+      logEvent('session_snapshot', {
+        session_id: state.session.uuid,
+        ok: !!ok,
+        n_responses: payload.responses.length
+      });
+      return !!ok;
+    } catch (err) {
+      logEvent('session_snapshot_error', {
+        error_message: err && err.message ? err.message : String(err || '')
+      });
+      return false;
+    }
+  }
+
+  function clearOwnSnapshot () {
+    if (!hasSessionStorageModule()) return;
+    if (!state.session || !state.session.uuid) return;
+    try {
+      if (typeof window.LJTSessionStorage.clearSnapshot === 'function') {
+        window.LJTSessionStorage.clearSnapshot(state.session.uuid);
+      }
+    } catch (err) { /* swallow */ }
+  }
+
+  // ---- Orphan recovery banner ----
+  // Resume (continue from where the participant left off) is DEFERRED: it
+  // would require rebuilding the CAT engine state (used indices, posterior,
+  // theta history) from the snapshot, which is intrusive given the engine's
+  // private state. The current implementation supports save-then-fresh, which
+  // covers the dominant failure case (browser crash mid-test) without risking
+  // a corrupted resumed session.
+  function renderOrphanRecoveryBanner (orphans) {
+    let banner = document.getElementById('orphan-recovery-banner');
+    if (banner) banner.remove();
+    banner = document.createElement('div');
+    banner.id = 'orphan-recovery-banner';
+    banner.className = 'orphan-recovery-banner';
+    banner.setAttribute('role', 'status');
+    banner.setAttribute('aria-live', 'polite');
+    const n = orphans.length;
+    banner.innerHTML =
+      '<h3>' + escapeHtml(t('orphanRecoveryTitle')) + '</h3>' +
+      '<p>' + escapeHtml(t('orphanRecoveryBody', { n: n })) + '</p>' +
+      '<div class="orphan-recovery-actions">' +
+        '<button type="button" id="btn-orphan-save-all">' +
+          escapeHtml(t('orphanRecoverySaveAll')) + '</button> ' +
+        '<button type="button" id="btn-orphan-discard">' +
+          escapeHtml(t('orphanRecoveryDiscard')) + '</button> ' +
+        '<button type="button" id="btn-orphan-skip">' +
+          escapeHtml(t('orphanRecoverySkip')) + '</button>' +
+      '</div>' +
+      '<p id="orphan-recovery-status" class="orphan-recovery-status" aria-live="polite"></p>';
+    const container = document.querySelector('.container');
+    if (container && container.firstChild) {
+      container.insertBefore(banner, container.firstChild);
+    } else if (document.body) {
+      document.body.insertBefore(banner, document.body.firstChild);
+    }
+    logEvent('orphan_recovery_shown', { n_orphans: n });
+
+    const removeBanner = () => { if (banner.parentNode) banner.parentNode.removeChild(banner); };
+    const setStatus = (msg) => {
+      const el = document.getElementById('orphan-recovery-status');
+      if (el) el.textContent = msg || '';
+    };
+
+    const btnSave = document.getElementById('btn-orphan-save-all');
+    if (btnSave) {
+      btnSave.onclick = () => {
+        let savedCount = 0;
+        orphans.forEach(o => {
+          try {
+            if (!o || !o.payload) return;
+            const safeId = (o.payload.participant && o.payload.participant.id
+              ? o.payload.participant.id : 'na').replace(/[^A-Za-z0-9_\-]/g, '_').slice(0, 32);
+            const tsRaw = o.savedAt || new Date().toISOString();
+            const ts = String(tsRaw).replace(/[:.]/g, '-').slice(0, 19);
+            const fname = 'LJT_partial_' + safeId + '_' + ts + '.xlsx';
+            const res = window.LJTExcel.export(fname, o.payload);
+            const ok = !!(res && (res === true || res.ok));
+            logEvent('orphan_recovery_save_attempt', {
+              session_id: o.sessionId, ok: ok, filename: fname
+            });
+            if (ok) {
+              savedCount++;
+              try { window.LJTSessionStorage.clearSnapshot(o.sessionId); } catch (e) { /* ignore */ }
+            }
+          } catch (err) {
+            logEvent('orphan_recovery_save_error', {
+              session_id: o ? o.sessionId : null,
+              error_message: err && err.message ? err.message : String(err || '')
+            });
+          }
+        });
+        setStatus(t('orphanRecoverySaved'));
+        announceForScreenReader(t('orphanRecoverySaved'));
+        window.setTimeout(removeBanner, 1500);
+      };
+    }
+
+    const btnDiscard = document.getElementById('btn-orphan-discard');
+    if (btnDiscard) {
+      btnDiscard.onclick = () => {
+        orphans.forEach(o => {
+          try {
+            if (o && o.sessionId) window.LJTSessionStorage.clearSnapshot(o.sessionId);
+          } catch (e) { /* ignore */ }
+        });
+        logEvent('orphan_recovery_discard', { n_orphans: orphans.length });
+        removeBanner();
+      };
+    }
+
+    const btnSkip = document.getElementById('btn-orphan-skip');
+    if (btnSkip) {
+      btnSkip.onclick = () => {
+        logEvent('orphan_recovery_skip', { n_orphans: orphans.length });
+        removeBanner();
+      };
+    }
+  }
+
+  // ---- Auto-download retry chain ----
+  // Schedule: immediate, +1.5s, +4s, +10s (final attempt).
+  // The final attempt re-invokes LJTExcel.export; the upstream xlsx_export
+  // module already falls back to JSON internally when XLSX is missing, so a
+  // dedicated jsonOnly flag is not required here.
+  const RESULT_SAVE_DELAYS_MS = [0, 1500, 4000, 10000];
+
+  function attemptResultExport (filename, payload, attempt, finalCallback) {
+    let result = null;
+    let threw = false;
+    try {
+      result = window.LJTExcel.export(filename, payload);
+    } catch (err) {
+      threw = true;
+      logEvent('result_save_exception', {
+        attempt: attempt,
+        error_message: err && err.message ? err.message : String(err || '')
+      });
+    }
+    const ok = !threw && !!(result && (result === true || result.ok));
+    logEvent('result_save_attempt', { attempt: attempt, ok: ok });
+    if (ok) { finalCallback(true, result); return; }
+    if (attempt >= RESULT_SAVE_DELAYS_MS.length) { finalCallback(false, result); return; }
+    const delay = RESULT_SAVE_DELAYS_MS[attempt];
+    window.setTimeout(() => {
+      attemptResultExport(filename, payload, attempt + 1, finalCallback);
+    }, delay);
+  }
+
+  function startResultSaveChain (filename, payload, onComplete) {
+    attemptResultExport(filename, payload, 1, (ok, result) => {
+      if (typeof onComplete === 'function') onComplete(ok, result);
+    });
   }
 
   function researchHelp (text) {
@@ -1656,6 +2134,19 @@
         const axis = max > min ? thetaGridPoints(min, max, step) : 81;
         theta2PointsEl.textContent = axis + ' x ' + axis + ' = ' + (axis * axis);
       }
+      const stopPserWarn = $('research-stop-pser-warning');
+      if (stopPserWarn && stopPserEl) {
+        const raw = stopPserEl.value;
+        const parsed = raw === '' ? NaN : Number(raw);
+        const out = !Number.isFinite(parsed) || parsed < 0.001 || parsed > 0.05;
+        if (out) {
+          stopPserWarn.textContent = t('researchStopPserOutOfRange');
+          stopPserWarn.hidden = false;
+        } else {
+          stopPserWarn.textContent = '';
+          stopPserWarn.hidden = true;
+        }
+      }
       urlEl.value = buildProtocolURL(false, overrides);
     };
 
@@ -1726,7 +2217,7 @@
             state.params.max_items = state.params.min_items;
           }
           state.params.target_se = boundedNumberValue(overrides.target_se, DEFAULTS.target_se, 0.05, 2.0, false);
-          state.params.stop_pser = boundedNumberValue(overrides.stop_pser, DEFAULTS.stop_pser, 0, 1, false);
+          state.params.stop_pser = boundedNumberValue(overrides.stop_pser, DEFAULTS.stop_pser, 0.0001, 0.1, false);
           state.params.quota_tol = boundedNumberValue(overrides.quota_tol, DEFAULTS.quota_tol, 0, 0.49, false);
         }
         updateURLFromProtocol(true, overrides);
@@ -1831,8 +2322,8 @@
     const keymap = normalizeKeymap(state.params.keymap);
     const adaptiveBounds = adaptiveItemBounds();
     const adaptiveProtocolHtml = state.delivery === 'adaptive'
-      ? '<div class="research-protocol-subsection">' +
-          '<h5>' + escapeHtml(t('researchAdaptiveSettingsTitle')) + '</h5>' +
+      ? '<details class="research-collapsible" open>' +
+          '<summary>' + escapeHtml(t('researchAdaptiveSettingsTitle')) + '</summary>' +
           '<div class="research-control-grid">' +
             '<label><span>' + escapeHtml(t('researchAlgorithmLabel')) + '</span>' +
               '<select id="research-algorithm">' +
@@ -1844,10 +2335,14 @@
             '<label><span>' + escapeHtml(t('researchStopRuleLabel')) + '</span>' +
               '<select id="research-stop-rule">' +
                 ['blueprint_pser', 'pser', 'se', 'max_items'].map(value =>
-                  '<option value="' + value + '"' + (state.stopRule === value ? ' selected' : '') +
-                    '>' + value + '</option>'
+                  '<option value="' + value + '"' +
+                    (state.stopRule === value ? ' selected' : '') +
+                    ' title="' + escapeHtml(t('researchStopRuleHelp_' + value)) + '">' +
+                    value + '</option>'
                 ).join('') +
-              '</select></label>' +
+              '</select>' +
+              '<small class="research-help">' + escapeHtml(t('researchStopRuleAllHelp')) + '</small>' +
+            '</label>' +
             '<label><span>' + escapeHtml(t('researchMinItemsLabel')) + '</span>' +
               '<input type="number" id="research-min-items" min="' + adaptiveBounds.floor +
                 '" max="' + adaptiveBounds.cap + '" step="1" value="' +
@@ -1860,19 +2355,20 @@
               '<input type="number" id="research-target-se" min="0.05" max="2" step="0.01" value="' +
                 escapeHtml(state.params.target_se) + '" /></label>' +
             '<label>' + researchLabel(t('researchStopPserLabel'), t('researchStopPserHelp')) +
-              '<input type="number" id="research-stop-pser" min="0" max="1" step="0.001" value="' +
+              '<input type="number" id="research-stop-pser" min="0.0001" max="0.1" step="0.001" value="' +
                 escapeHtml(state.params.stop_pser) + '" />' +
-              '<small>' + escapeHtml(t('researchStopPserGuide')) + '</small></label>' +
+              '<small>' + escapeHtml(t('researchStopPserGuide')) + '</small>' +
+              '<small id="research-stop-pser-warning" class="research-warning" hidden></small></label>' +
             '<label><span>' + escapeHtml(t('researchQuotaTolLabel')) + '</span>' +
               '<input type="number" id="research-quota-tol" min="0" max="0.49" step="0.01" value="' +
                 escapeHtml(state.params.quota_tol) + '" /></label>' +
           '</div>' +
-        '</div>'
+        '</details>'
       : '';
     const theta2AxisPoints = Math.round(Math.sqrt(thetaGrid2DPointCount()));
     const numericalSettingsHtml =
-      '<div class="research-protocol-subsection">' +
-        '<h5>' + escapeHtml(t('researchNumericalSettingsTitle')) + '</h5>' +
+      '<details class="research-collapsible">' +
+        '<summary>' + escapeHtml(t('researchNumericalSettingsTitle')) + '</summary>' +
         '<p class="research-model">' + escapeHtml(t('researchNumericalSettingsNote')) + '</p>' +
         '<div class="research-control-grid">' +
           '<label>' + researchLabel(t('researchTheta1DMinLabel'), t('researchTheta1DHelp')) +
@@ -1901,7 +2397,49 @@
               escapeHtml(theta2AxisPoints + ' x ' + theta2AxisPoints + ' = ' +
                 thetaGrid2DPointCount()) + '</output></label>' +
         '</div>' +
-      '</div>';
+        '<p class="research-grid-cost ' + (thetaGrid1DPointCount() > 5000 ? 'warn' : 'ok') + '">' +
+          escapeHtml(thetaGrid1DPointCount() > 5000 ? t('researchGridCostWarning1D') : '') +
+        '</p>' +
+        '<p class="research-grid-cost ' + (theta2AxisPoints > 200 ? 'warn' : 'ok') + '">' +
+          escapeHtml(theta2AxisPoints > 200 ? t('researchGridCostWarning2D') : '') +
+        '</p>' +
+      '</details>';
+    const renderReference = (titleKey, citationKey, roleKey, doiKey) => {
+      const doi = t(doiKey);
+      const doiHtml = doi
+        ? ' <a class="research-doi" href="' + escapeHtml(doi) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(doi) + '</a>'
+        : '';
+      return '<li>' +
+        '<strong>' + escapeHtml(t(titleKey)) + '</strong> ' +
+        escapeHtml(t(citationKey)) + doiHtml +
+        '<br><small>' + escapeHtml(t(roleKey)) + '</small>' +
+        '</li>';
+    };
+    const referencesHtml =
+      '<details class="research-collapsible">' +
+        '<summary>' + escapeHtml(t('researchReferencesTitle')) + '</summary>' +
+        '<p class="research-model">' + escapeHtml(t('researchReferencesIntro')) + '</p>' +
+        '<div class="research-reference-group">' +
+          '<h6>' + escapeHtml(t('researchReferenceGroupEstimation')) + '</h6>' +
+          '<ul class="research-references">' +
+            renderReference('researchReferenceEAP', 'researchReferenceEAPCitation', 'researchReferenceEAPRole', 'researchReferenceEAPDOI') +
+          '</ul>' +
+        '</div>' +
+        '<div class="research-reference-group">' +
+          '<h6>' + escapeHtml(t('researchReferenceGroupStopping')) + '</h6>' +
+          '<ul class="research-references">' +
+            renderReference('researchReferencePSER', 'researchReferencePSERCitation', 'researchReferencePSERRole', 'researchReferencePSERDOI') +
+            renderReference('researchReferenceMorris', 'researchReferenceMorrisCitation', 'researchReferenceMorrisRole', 'researchReferenceMorrisDOI') +
+          '</ul>' +
+        '</div>' +
+        '<div class="research-reference-group">' +
+          '<h6>' + escapeHtml(t('researchReferenceGroupTheory')) + '</h6>' +
+          '<ul class="research-references">' +
+            renderReference('researchReferenceBlueprint', 'researchReferenceBlueprintCitation', 'researchReferenceBlueprintRole', 'researchReferenceBlueprintDOI') +
+          '</ul>' +
+        '</div>' +
+        '<p class="research-references-note"><small>' + escapeHtml(t('researchReferenceReadmeLink')) + '</small></p>' +
+      '</details>';
     const protocolHtml =
       '<div class="research-protocol">' +
         '<h4>' + escapeHtml(t('researchProtocolTitle')) + '</h4>' +
@@ -1973,6 +2511,7 @@
         '</div>' +
         adaptiveProtocolHtml +
         numericalSettingsHtml +
+        referencesHtml +
         '<p id="research-timing-help" class="research-model"></p>' +
         '<div class="research-url-row">' +
           '<label><span>' + escapeHtml(t('researchParticipantUrlLabel')) + '</span>' +
@@ -1985,6 +2524,20 @@
           '<button type="button" id="research-copy-url" class="secondary-btn">' +
             escapeHtml(t('researchCopyUrl')) + '</button>' +
           '<span id="research-protocol-status" class="research-protocol-status" role="status" aria-live="polite"></span>' +
+        '</div>' +
+        '<div class="research-build-info" aria-label="' + escapeHtml(t('researchBuildInfoTitle')) + '">' +
+          '<dl>' +
+            '<dt>' + escapeHtml(t('researchBuildAppVersion')) + '</dt>' +
+            '<dd>' + escapeHtml(APP_VERSION) + '</dd>' +
+            '<dt>' + escapeHtml(t('researchBuildCalibrationHash')) + '</dt>' +
+            '<dd><code>' + escapeHtml(
+              state.calibrationHash
+                ? state.calibrationHash.slice(0, 12) + '...'
+                : '-'
+            ) + '</code></dd>' +
+            '<dt>' + escapeHtml(t('researchBuildAssetCacheVersion')) + '</dt>' +
+            '<dd>' + escapeHtml(ASSET_CACHE_VERSION) + '</dd>' +
+          '</dl>' +
         '</div>' +
       '</div>';
     const itemSummaryHtml =
@@ -2254,12 +2807,17 @@
 
     function revealTarget () {
       if (committed) return;
+      // Capture the response-time zero point *before* any DOM mutation so
+      // that synchronous style/layout work cannot push RT 0 past the audio
+      // offset. This brings the gap between the HTML5 `ended` event and
+      // RT 0 down to a handful of microseconds. (Earlier the four DOM
+      // updates below ran first, leaving ε well under 1 ms but nonzero.)
+      state.questionStart = performance.now();
       btnPlay.disabled = true;
       btnPlay.classList.add('hidden');
       $('target-word-display').textContent = t('decisionPrompt');
       if (area) area.classList.remove('hidden');
       setStatus(t('audioEnded', { prompt: responseKeyPrompt() }));
-      state.questionStart = performance.now();
       logEvent('target_onset', {
         targetword: targetword,
         response_window_ms: responseWindowMs()
@@ -2378,6 +2936,9 @@
       condition: item.condition || ''
     };
     $('trial-counter').textContent = t('practiceCounter', { n: idx + 1 });
+    announceForScreenReader(state.lang === 'ja'
+      ? '練習問題 ' + (idx + 1) + ' / 4'
+      : 'Practice trial ' + (idx + 1) + ' of 4');
 
     presentStimulus(cacheBustedAssetPath('audio/practice/' + item.stimuli), item.targetword, (signal) => {
       if (signal === null) {
@@ -2488,6 +3049,7 @@
     });
     showStage('stage-trial');
     $('trial-label').textContent = t('mainLabel');
+    announceForScreenReader(state.lang === 'ja' ? '本試行を開始します' : 'Main test starting');
     nextItem();
   }
 
@@ -2559,7 +3121,23 @@
       condition: it.condition || ''
     };
 
-    $('trial-counter').textContent = t('questionCounter', { n: state.cat.usedCount() + 1 });
+    // Progress indicator with median estimate. Median = 20 items: this matches
+    // the PSER ~ 20-item average reported by Morris et al. (2020) for
+    // stop_pser = 0.01 (the LJT-CAT default). Once the actual length exceeds
+    // the median we drop the "/ ~ m" suffix to avoid misleading the
+    // participant ("question 25 / approximately 20").
+    const trialN = state.cat.usedCount() + 1;
+    const MAIN_MEDIAN_LENGTH = 20;
+    if (trialN <= MAIN_MEDIAN_LENGTH) {
+      $('trial-counter').textContent = t('questionCounterEstimated', {
+        n: trialN, median: MAIN_MEDIAN_LENGTH
+      });
+    } else {
+      $('trial-counter').textContent = t('questionCounter', { n: trialN });
+    }
+    announceForScreenReader(t('questionCounterEstimated', {
+      n: trialN, median: MAIN_MEDIAN_LENGTH
+    }));
     logEvent('main_trial_selected', {
       step: state.cat.usedCount() + 1,
       item_index: sel.index,
@@ -2657,7 +3235,48 @@
       timed_out: timedOut
     });
     cleanupResponseInput();
+
+    // Crash-recovery snapshot: every 5th committed main response. Sync write,
+    // wrapped so a localStorage failure (quota, private mode) cannot break the
+    // trial loop.
+    const committedCount = state.cat.usedCount();
+    if (committedCount > 0 && committedCount % 5 === 0) {
+      try { snapshotPartialSession(); } catch (e) { /* swallow */ }
+    }
+
+    // Audio prefetch: warm the network cache for an item that is likely to be
+    // selected next. We can't safely call selectNext() (it would mutate CAT
+    // state); instead we look at the next-best candidate from the unused pool
+    // by simulating a tiny peek. As a robust fallback, we just preload the
+    // adaptive item with the highest information at the current theta among
+    // unused items (best-effort; misses are harmless).
+    try { schedulePrefetchForLikelyNext(); } catch (e) { /* swallow */ }
+
     waitForTrialAdvance(nextItem, postResponseMs());
+  }
+
+  // Best-effort prediction of the next likely item without mutating CAT state.
+  // Strategy: ask the CAT engine for a candidate ranking if it exposes a
+  // non-mutating peek API; otherwise fall back to "any unused adaptive item"
+  // (the cache hit when we eventually load it is still a win).
+  function schedulePrefetchForLikelyNext () {
+    if (!state.cat || !state.adaptiveItems || !state.adaptiveItems.length) return;
+    let candidateIndex = -1;
+    if (typeof state.cat.peekNext === 'function') {
+      const peek = state.cat.peekNext();
+      if (peek && Number.isFinite(peek.index)) candidateIndex = peek.index;
+    }
+    if (candidateIndex < 0 && typeof state.cat.usedIndices === 'function') {
+      const used = state.cat.usedIndices() || [];
+      const usedSet = new Set(used);
+      for (let i = 0; i < state.adaptiveItems.length; i++) {
+        if (!usedSet.has(i)) { candidateIndex = i; break; }
+      }
+    }
+    if (candidateIndex < 0) return;
+    const it = state.adaptiveItems[candidateIndex];
+    if (!it || !it.stimuli) return;
+    prefetchAudio(cacheBustedAssetPath('audio/main/' + it.stimuli));
   }
 
   // ---- Finalization ----
@@ -2877,7 +3496,14 @@
     return {
       generated_at: nowISO(),
       app_version: APP_VERSION,
+      asset_cache_version: ASSET_CACHE_VERSION,
       calibration_version: state.calibration ? (state.calibration.version || 'unknown') : '',
+      calibration_hash: state.calibrationHash || '',
+      build_timestamp: nowISO(),
+      code_loaded_at: CODE_LOADED_AT,
+      user_agent: navigator.userAgent || '',
+      tz_offset_minutes: new Date().getTimezoneOffset(),
+      nt_threshold_ms: state.params.nt_threshold_ms,
       delivery: state.delivery,
       mode: state.mode,
       language: state.lang,
@@ -3275,7 +3901,12 @@
     // Session meta
     state.session.user_agent = navigator.userAgent;
     state.session.calibration_version = state.calibration.version || 'unknown';
+    state.session.calibration_hash = state.calibrationHash || '';
     state.session.app_version = APP_VERSION;
+    state.session.asset_cache_version = ASSET_CACHE_VERSION;
+    state.session.build_timestamp = nowISO();
+    state.session.code_loaded_at = CODE_LOADED_AT;
+    state.session.tz_offset_minutes = new Date().getTimezoneOffset();
     state.session.instruction_version = UX_INSTRUCTION_VERSION;
     state.session.language = state.lang;
     state.session.research_mode = state.researchMode;
@@ -3438,23 +4069,70 @@
       protocol_manifest: protocolManifest
     };
 
-    // Trigger download
-    const exportResult = window.LJTExcel.export(filename, payload);
-    const ok = !!(exportResult && (exportResult === true || exportResult.ok));
-    const actualFilename = exportResult && exportResult.filename ? exportResult.filename : filename;
-    const usedFallback = !!(exportResult && exportResult.fallback);
-    state.session.result_filename = actualFilename;
-    payload.session.result_filename = actualFilename;
-    if (fnEl) fnEl.textContent = t('resultFilename', { filename: actualFilename });
+    // Trigger download with auto-retry chain (immediate, +1.5s, +4s, +10s).
     const ds = $('download-status');
-    if (ok) {
-      ds.textContent = usedFallback ? t('savedJsonStatus') : t('savedStatus');
-      ds.classList.add('done');
-      $('btn-download-again').classList.remove('hidden');
-      $('btn-download-again').onclick = () => window.LJTExcel.export(filename, payload);
-    } else {
-      ds.textContent = t('saveFailed');
-    }
+    if (ds) ds.textContent = t('savingStatus');
+    startResultSaveChain(filename, payload, (ok, exportResult) => {
+      const actualFilename = exportResult && exportResult.filename
+        ? exportResult.filename
+        : filename;
+      const usedFallback = !!(exportResult && exportResult.fallback);
+      state.session.result_filename = actualFilename;
+      payload.session.result_filename = actualFilename;
+      if (fnEl) fnEl.textContent = t('resultFilename', { filename: actualFilename });
+      if (ok) {
+        if (ds) {
+          ds.textContent = usedFallback ? t('savedJsonStatus') : t('savedStatus');
+          ds.classList.add('done');
+        }
+        const dlBtn = $('btn-download-again');
+        if (dlBtn) {
+          dlBtn.classList.remove('hidden');
+          dlBtn.onclick = () => {
+            if (ds) {
+              ds.textContent = t('savingStatus');
+              ds.classList.remove('done');
+            }
+            startResultSaveChain(filename, payload, (ok2) => {
+              if (ds) {
+                ds.textContent = ok2 ? t('savedStatus') : t('saveFailedActionable');
+                if (ok2) ds.classList.add('done');
+              }
+              announceForScreenReader(ok2
+                ? t('savedStatus')
+                : t('saveFailedActionable'));
+            });
+          };
+        }
+        announceForScreenReader(t('savedStatus'));
+        // Snapshot is no longer needed: clear it now that the final file saved.
+        clearOwnSnapshot();
+      } else {
+        if (ds) ds.textContent = t('saveFailedActionable');
+        // Keep the snapshot so the participant can retry on next page load.
+        announceForScreenReader(t('saveFailedActionable'));
+        const dlBtn = $('btn-download-again');
+        if (dlBtn) {
+          dlBtn.classList.remove('hidden');
+          dlBtn.onclick = () => {
+            if (ds) {
+              ds.textContent = t('savingStatus');
+              ds.classList.remove('done');
+            }
+            startResultSaveChain(filename, payload, (ok2) => {
+              if (ds) {
+                ds.textContent = ok2 ? t('savedStatus') : t('saveFailedActionable');
+                if (ok2) ds.classList.add('done');
+              }
+              if (ok2) clearOwnSnapshot();
+              announceForScreenReader(ok2
+                ? t('savedStatus')
+                : t('saveFailedActionable'));
+            });
+          };
+        }
+      }
+    });
   }
 
   function round6 (x) { return (typeof x === 'number') ? Number(x.toFixed(6)) : x; }
@@ -3515,6 +4193,34 @@
     window.addEventListener('focus', () => logEvent('window_focus'));
     state.practice.items = state.practiceItems || [];
     renderResearchPanel();
+
+    // Boot-time UX scaffolding: aria-live announcer and audio prefetch
+    // element. Both must exist before showStage so the first stage_change
+    // announcement reaches assistive tech.
+    ensureSrAnnouncer();
+    ensurePrefetchAudioElement();
+
+    // Garbage-collect old session snapshots (older than 7 days) and surface
+    // any orphan partial sessions found in localStorage. The recovery banner
+    // is displayed BEFORE the welcome page so participants can save lost
+    // data from a prior interrupted run.
+    if (hasSessionStorageModule()) {
+      try {
+        if (typeof window.LJTSessionStorage.clearOldSnapshots === 'function') {
+          window.LJTSessionStorage.clearOldSnapshots(7);
+        }
+        const orphans = typeof window.LJTSessionStorage.loadAllSnapshots === 'function'
+          ? (window.LJTSessionStorage.loadAllSnapshots() || [])
+          : [];
+        if (orphans.length > 0) {
+          renderOrphanRecoveryBanner(orphans);
+        }
+      } catch (err) {
+        logEvent('orphan_recovery_error', {
+          error_message: err && err.message ? err.message : String(err || '')
+        });
+      }
+    }
 
     showStage('stage-welcome');
 

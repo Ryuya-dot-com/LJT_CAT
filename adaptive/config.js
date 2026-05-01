@@ -1,3 +1,21 @@
+/* adaptive/config.js — runtime configuration for the LJT-CAT adaptive entry.
+ *
+ * Methodological defaults:
+ *   - defaultStopRule = 'blueprint_pser'
+ *       PSER stopping (Choi, Grady & Dodd, 2011), with content-blueprint
+ *       constraints and tuning guidance from Morris et al. (2020).
+ *   - target_se = 0.30 (alternative SE-threshold rule;
+ *       cf. Babcock & Weiss, 2009; Wainer et al., 2000)
+ *   - stop_pser = 0.01 — empirical sweet spot reported by Morris et al.
+ *       (2020) for non-uniform item banks; ≈ 20 items on average.
+ *   - theta grid [-6, 6] step 0.01 — high-resolution refinement of the
+ *       quadrature scheme of Bock & Mislevy (1982).
+ *   - nt_threshold_ms = 350 — rapid-guessing threshold; auxiliary scoring
+ *       follows Wise & Ma (2012); see also Wise & Kong (2005),
+ *       Wise & DeMars (2006).
+ *
+ * See README "Methodological References" for full citations.
+ */
 window.LJT_APP_CONFIG = {
   delivery: 'adaptive',
   assetBase: '..',

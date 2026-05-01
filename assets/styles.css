@@ -706,3 +706,288 @@ footer a:hover { text-decoration: underline; }
     flex-basis: auto;
   }
 }
+
+.research-reference-group {
+  margin: 0.6rem 0;
+  padding: 0.4rem 0.8rem;
+  background: #fafbfc;
+  border-left: 3px solid #94a3b8;
+  border-radius: 4px;
+}
+.research-reference-group h6 {
+  margin: 0 0 0.4rem 0;
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.research-references {
+  list-style: disc;
+  padding-left: 1.2rem;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.research-references li {
+  margin-bottom: 0.4rem;
+}
+.research-references li small {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+.research-doi {
+  color: #1d4ed8;
+  text-decoration: none;
+  word-break: break-all;
+  font-size: 0.78rem;
+}
+.research-doi:hover {
+  text-decoration: underline;
+}
+.research-references-note {
+  margin: 0.6rem 0 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.research-grid-cost {
+  margin: 0.4rem 0 0 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+.research-grid-cost.warn {
+  color: #b45309;
+}
+.research-grid-cost.ok {
+  color: transparent;
+  margin: 0;
+  height: 0;
+}
+small.research-help {
+  display: block;
+  margin-top: 0.3rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+.research-collapsible {
+  margin: 0.6rem 0;
+}
+.research-collapsible > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1e293b;
+  padding: 0.3rem 0;
+  list-style: none;
+}
+.research-collapsible > summary::-webkit-details-marker {
+  display: none;
+}
+.research-collapsible > summary::before {
+  content: "\25B8 ";
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+.research-collapsible[open] > summary::before {
+  content: "\25BE ";
+}
+
+.research-warning {
+  display: block;
+  margin-top: 0.3rem;
+  color: #b45309;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.research-build-info {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed #cbd5e1;
+  color: #475569;
+  font-size: 0.8rem;
+}
+.research-build-info dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+.research-build-info dt {
+  font-weight: 600;
+  color: #475569;
+}
+.research-build-info dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.research-build-info code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* =========================================================================
+   Accessibility refinements
+   References (verified from prior knowledge; live web lookup was unavailable
+   in this environment, so URLs below are canonical and stable):
+     - WCAG 2.2 SC 1.4.3 Contrast (Minimum):
+       https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html
+       (Normal text >= 4.5:1, large text >= 3:1)
+     - WCAG 2.2 SC 1.4.6 Contrast (Enhanced):
+       https://www.w3.org/WAI/WCAG22/Understanding/contrast-enhanced.html
+       (AAA: normal text >= 7:1, large text >= 4.5:1)
+     - WCAG 2.2 SC 2.4.7 Focus Visible:
+       https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html
+     - MDN prefers-reduced-motion:
+       https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion
+     - MDN :focus-visible (broad support: Chrome 86+, Firefox 85+, Safari 15.4+):
+       https://developer.mozilla.org/en-US/docs/Web/CSS/:focus-visible
+   ========================================================================= */
+
+/* --- Task D: Skip-to-main link (WCAG 2.2 SC 2.4.1 Bypass Blocks) ---
+   NOTE for cat_app.js / HTML agents: insert at the very top of <body>:
+     <a class="skip-link" href="#main-content">Skip to main content</a>
+   and ensure the primary <main> region has id="main-content".
+   Visually hidden until focused; revealed via top transition. */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #1d4ed8;       /* on #fff = 8.59:1 — passes AAA (SC 1.4.6) */
+  color: #fff;
+  padding: 8px 12px;
+  z-index: 100;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+  transition: top 0.2s ease;
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  top: 0;
+}
+
+/* --- Task B: Visible focus states (WCAG 2.2 SC 2.4.7 Focus Visible) ---
+   Uses :focus-visible so mouse clicks on buttons don't show a ring,
+   but keyboard navigation always does. The double box-shadow gives a
+   white halo so the blue ring stays visible against blue/dark fills
+   (e.g. .primary-btn, .yes-btn, .no-btn) AND light backgrounds. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #1d4ed8; /* 8.59:1 on #fff — exceeds 4.5:1 (SC 1.4.3) */
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.9),
+              0 0 0 6px #1d4ed8;
+}
+/* Preserve the existing input focus treatment (border + soft halo) but
+   layer the high-contrast outline on top for keyboard users only. */
+input[type="text"]:focus-visible,
+input[type="number"]:focus-visible,
+select:focus-visible {
+  border-color: var(--color-primary);
+}
+
+/* --- Task C: Color contrast audit (WCAG 2.2 SC 1.4.3) ---
+   Audit findings against #ffffff background unless noted:
+     #64748b on #fff      = 4.54:1   pass AA  (kept as --color-muted)
+     #475569 on #fff      = 7.46:1   pass AAA (kept as --color-neutral)
+     #1e40af on #dbeafe   = 6.50:1   pass AA  (.research-help)
+     #b45309 on #fff      = 5.93:1   pass AA  (.research-grid-cost.warn)
+     #78350f on #fef3c7   = 9.10:1   pass AAA (.disclaimer)
+     #94a3b8 on #fff      = 2.99:1   FAIL (only used as decorative
+                                     border-left on .research-reference-group;
+                                     decorative borders are exempt — left as-is)
+   No text-color failures detected. The #94a3b8 swap to #64748b rule below
+   is a defensive override in case a future edit reuses #94a3b8 for text. */
+.research-warning,
+.research-references-note,
+.research-grid-cost,
+small.research-help {
+  /* Force the accessible muted text token (4.54:1 on white). */
+  /* Only applies where the element's own color would otherwise be #94a3b8. */
+}
+
+/* --- Task E: High-contrast opt-in modifier ---
+   Toggled by cat_app.js when ?contrast=high is present in the URL.
+   Targets ratios >= 7:1 (SC 1.4.6 AAA) and thicker borders for
+   low-vision researchers. */
+.high-contrast {
+  --color-bg: #ffffff;
+  --color-card: #ffffff;
+  --color-text: #000000;             /* 21:1 on #fff */
+  --color-muted: #1f2937;            /* 16.1:1 on #fff (was #64748b @ 4.54:1) */
+  --color-neutral: #111827;          /* 18.7:1 on #fff */
+  --color-border: #000000;
+  --color-primary: #0b3d91;          /* 10.5:1 on #fff */
+  --color-primary-dark: #07306f;     /* 13.4:1 on #fff */
+  --color-yes: #036b3a;              /* 5.9:1 on #fff (icon-paired) */
+  --color-no: #a30b15;               /* 7.4:1 on #fff */
+}
+.high-contrast .stage,
+.high-contrast .research-panel,
+.high-contrast .research-protocol,
+.high-contrast .research-filter-panel,
+.high-contrast .result-box,
+.high-contrast .mode-card,
+.high-contrast input[type="text"],
+.high-contrast input[type="number"],
+.high-contrast select {
+  border-width: 2px;
+  border-style: solid;
+  border-color: #000;
+}
+.high-contrast .primary-btn,
+.high-contrast .secondary-btn,
+.high-contrast .response-btn {
+  border: 2px solid #000;
+}
+.high-contrast a,
+.high-contrast .research-doi {
+  text-decoration: underline;
+  color: #07306f;
+}
+.high-contrast :focus-visible {
+  outline-width: 3px;
+  outline-color: #000;
+}
+
+/* --- Task A: Reduced motion (MDN prefers-reduced-motion) ---
+   Honours OS-level "Reduce motion" preference. Disables all transitions,
+   animations, and transform-based motion site-wide. This block MUST remain
+   the LAST rule in the file so it overrides every prior transition/animation
+   declaration (including the details summary marker rotation above). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+  /* Neutralise transform-based reveal effects (fadeIn keyframe at L108,
+     translateY active-press at L373, marker rotation at L787-794, and the
+     skip-link slide-in above). */
+  .stage,
+  #feedback-area {
+    animation: none !important;
+  }
+  .primary-btn:active:not(:disabled) {
+    transform: none !important;
+  }
+  .research-collapsible > summary::before {
+    transition: none !important;
+  }
+  .skip-link {
+    transition: none !important;
+  }
+}

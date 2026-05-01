@@ -3,8 +3,19 @@
  * Default θ grid: [-4, 4] × [-4, 4] step 0.1 (81 × 81 = 6,561 points)
  * Prior: bivariate normal with factor correlation ρ (from calibration)
  * Item: P(y=1 | θ1, θ2) = logistic(a1 θ1 + a2 θ2 + d)
- * Item selection: D-optimality (determinant of Fisher info matrix)
+ * Estimator: EAP on grid (Bock & Mislevy, 1982; multidimensional extension)
+ * Item selection: A-optimality (trace of Fisher info matrix). The full
+ *   D-optimality criterion (determinant) collapses to zero for confirmatory
+ *   2PL items loading on a single factor (a1 or a2 = 0), so the trace is
+ *   used as a stable scalar in the same family.
+ * Numerical stability: posterior log-likelihood updates use a softplus-based
+ *   logSigmoid to avoid the catastrophic cancellation that arose from the
+ *   earlier `log(p + 1e-300)` pattern at extreme x = a1·θ1 + a2·θ2 + d.
  * Report: θ_F1, θ_F2; TOEIC = β0 + β1 F1 + β2 F2
+ *
+ * Used as a post-hoc 2F MIRT sensitivity check; not the primary scoring
+ * pathway. See README "Methodological References" for the full reference
+ * list.
  */
 
 (function (global) {
@@ -49,6 +60,18 @@
 
   function logistic (x) { return 1 / (1 + Math.exp(-x)); }
 
+  /** Numerically stable log P(y=1 | x) = log sigmoid(x).
+   *  Uses the softplus identity log(1 + e^z) = max(z, 0) + log1p(e^{-|z|})
+   *  so that logSigmoid(x) = -softplus(-x) is exact across the full range
+   *  of x (no underflow / cancellation). The earlier
+   *  `Math.log(p + 1e-300)` pattern silently floored log(1-p) at about
+   *  -690 even when the true value was -10^3 or smaller, distorting the
+   *  posterior at extreme item parameters. */
+  function logSigmoid (x) {
+    const az = Math.abs(x);
+    return -(Math.max(-x, 0) + Math.log1p(Math.exp(-az)));
+  }
+
   /** Bivariate normal log-density with zero mean and correlation rho. */
   function bvnLogPdf (t1, t2, rho) {
     const det  = 1 - rho * rho;
@@ -69,37 +92,51 @@
   }
 
   function summarizePosterior (axis, logPost) {
+    // Stability + speed: cache normalized weights once. The earlier version
+    // recomputed Math.exp(logPost[k] - logNorm) three times (sum, mean, var)
+    // and used Math.max(...logPost) which spreads a 6,561-element typed
+    // array — both of which are avoided here.
     const n = axis.length;
     const N = logPost.length;
     let max = -Infinity;
     for (let k = 0; k < N; k++) if (logPost[k] > max) max = logPost[k];
-    let sumExp = 0;
-    for (let k = 0; k < N; k++) sumExp += Math.exp(logPost[k] - max);
-    const logNorm = max + Math.log(sumExp);
+    const w = new Float64Array(N);
+    let sumW = 0;
+    for (let k = 0; k < N; k++) {
+      const e = Math.exp(logPost[k] - max);
+      w[k] = e;
+      sumW += e;
+    }
+    const invSum = 1 / sumW;
 
     let m1 = 0;
     let m2 = 0;
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        const w = Math.exp(logPost[i * n + j] - logNorm);
-        m1 += axis[i] * w;
-        m2 += axis[j] * w;
+        const wij = w[i * n + j];
+        m1 += axis[i] * wij;
+        m2 += axis[j] * wij;
       }
     }
+    m1 *= invSum;
+    m2 *= invSum;
 
     let v11 = 0;
     let v22 = 0;
     let v12 = 0;
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        const w = Math.exp(logPost[i * n + j] - logNorm);
+        const wij = w[i * n + j];
         const d1 = axis[i] - m1;
         const d2 = axis[j] - m2;
-        v11 += d1 * d1 * w;
-        v22 += d2 * d2 * w;
-        v12 += d1 * d2 * w;
+        v11 += d1 * d1 * wij;
+        v22 += d2 * d2 * wij;
+        v12 += d1 * d2 * wij;
       }
     }
+    v11 *= invSum;
+    v22 *= invSum;
+    v12 *= invSum;
 
     return {
       theta1: m1,
@@ -111,13 +148,12 @@
   }
 
   function updatePosterior (axis, logPost, item, correct) {
+    // Stable log-likelihood: log P(y=1) = logSigmoid(x), log P(y=0) = logSigmoid(-x).
     const n = axis.length;
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        const p = logistic(item.a1 * axis[i] + item.a2 * axis[j] + item.d);
-        logPost[i * n + j] += (correct === 1)
-          ? Math.log(p + 1e-300)
-          : Math.log(1 - p + 1e-300);
+        const x = item.a1 * axis[i] + item.a2 * axis[j] + item.d;
+        logPost[i * n + j] += (correct === 1) ? logSigmoid(x) : logSigmoid(-x);
       }
     }
   }

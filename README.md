@@ -33,6 +33,10 @@ scoring output, protocol metadata, and quality-control flags.
 Live site:
 <https://ryuya-dot-com.github.io/LJT_CAT/>
 
+Methodologically grounded in Bock & Mislevy (1982), Choi et al. (2011),
+Morris et al. (2020) - see
+[Methodological References](#方法論的参考文献--methodological-references).
+
 ---
 
 ## Intended Use
@@ -110,6 +114,38 @@ Default timing:
 
 In untimed mode, participants can respond without a response-window timeout.
 In self-paced mode, participants advance with Space or the on-screen button.
+
+---
+
+## Response Time Measurement
+
+`rt_ms` is the time from **audio offset** (the moment the HTML5 `<audio>`
+element fires its `ended` event) to the participant's response.
+
+Implementation details (for methods sections):
+
+- The clock is `performance.now()`, a high-resolution monotonic timer that
+  is unaffected by system clock adjustments.
+- The zero point is captured as the **first statement** of the
+  `revealTarget()` callback (`js/cat_app.js`), which runs synchronously
+  inside the `ended` event handler. No DOM mutation happens before the
+  zero point is recorded.
+- Residual gap between `ended` and RT 0 is on the order of microseconds
+  (a single function call and assignment).
+- `rt_ms` is rounded to the nearest millisecond on save.
+- `audio_ended_at` is also recorded as a wall-clock (`Date.now()`) field
+  for cross-reference, but RT itself is computed entirely in the
+  high-resolution monotonic domain.
+
+In timed mode, the response window starts at the same zero point and
+expires after `response_window_ms` (default 1250 ms). When the window
+expires, the trial is closed with `timed_out: true`, `response: null`,
+and `rt_ms` ≈ `response_window_ms` (within the browser's `setTimeout`
+scheduling jitter, typically a few milliseconds).
+
+Audio onset and audio duration are also logged (`audio_play_start`,
+`audio_play_end`, `audio_duration_ms`) so that any analysis requiring
+RT-from-audio-onset can be derived post hoc.
 
 ---
 
@@ -265,7 +301,7 @@ https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=max_items&max_items=
 ```text
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?lang=en
-https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?lab=UCL_Komuro
+https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?lab=YOUR_LAB_CODE
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?timing=untimed&pace=self
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?max_items=80
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=se&target_se=0.30
@@ -316,6 +352,15 @@ Researchers can configure:
 
 The generated participant URL preserves these settings. The same settings are
 also written to the Excel workbook in `protocol_manifest` and `metadata`.
+
+The panel groups long content into collapsible subsections (HTML
+`<details>`/`<summary>`) so that the candidate item bank, protocol
+settings, and methodological references can be expanded or hidden
+individually. Each reference in the panel is rendered with a clickable
+DOI link and is grouped by design component (estimation, stopping
+rules, general CAT theory) to mirror the README's
+[Methodological References](#方法論的参考文献--methodological-references)
+section.
 
 ---
 
@@ -379,6 +424,35 @@ Important summary fields include:
 
 ---
 
+## クラッシュ回復と自動ダウンロード / Crash Recovery & Auto-Download
+
+LJT-CAT is designed so that incidental browser failures do not lose
+participant data.
+
+### Periodic snapshots
+During the main test, the partial response payload is written to browser
+`localStorage` every 5 trials. The snapshot is cleared once the final
+Excel file has saved successfully.
+
+### Crash detection on next launch
+When the participant returns to the app after an interrupted session,
+LJT-CAT detects the orphan snapshot and offers three actions:
+
+| Action | Behavior |
+|---|---|
+| Save incomplete data | Triggers an Excel/JSON download of the partial payload. |
+| Discard | Removes the snapshot. |
+| Skip for now | Keeps the snapshot for later. |
+
+Snapshots older than 7 days are garbage-collected automatically.
+
+### Auto-download retry chain
+At session end, the result file is downloaded automatically. If the first
+attempt fails, the app retries after 1.5 s, 4 s, and finally 10 s with a
+JSON-only fallback. Each attempt logs a `result_save_attempt` event.
+
+---
+
 ## Quality-Control Flags
 
 `quality_flags` is designed for quick screening before statistical analysis.
@@ -396,6 +470,41 @@ Typical checks include:
 
 Adaptive sessions can stop early. A short session is not automatically invalid,
 but the exported reporting flag requires sufficient condition coverage.
+
+---
+
+## 統計的品質コントロール / Statistical Quality Controls
+
+`quality_flags` に加えて、LJT-CAT は IRT ベースの統計的品質指標を
+セッション終了時に計算し、Excel ワークブックの `summary` シートおよび
+`cat_trace` シートに書き出します。これらは事後的なスクリーニング、
+報告基準の設定、再現性の担保を目的としたものです。
+
+In addition to the heuristic checks listed under `quality_flags`, LJT-CAT
+computes IRT-based statistical quality indicators at session finalize
+and writes them to the `summary` and `cat_trace` sheets of the Excel
+workbook. They are intended for post-hoc screening, reporting-threshold
+decisions, and reproducibility.
+
+- **Person-fit statistics (lz, lz\*) per condition.** Standardised
+  log-likelihood person-fit indices are computed separately for the
+  Hit and CR conditions following Drasgow, Levine, and Williams (1985)
+  for `lz` and Snijders (2001) for `lz*` (the asymptotically corrected
+  variant for short and adaptively administered tests). Extreme
+  values flag response patterns that are inconsistent with the
+  estimated theta under the per-condition 2PL model.
+- **Posterior boundary diagnostic.** A flag is raised when more than
+  1% of the EAP posterior mass lies at the edges of the theta grid,
+  indicating that the default `[-6, 6]` grid may be too narrow for
+  the participant. The diagnostic uses the same Bock and Mislevy (1982)
+  EAP-on-grid quadrature as live scoring.
+- **Calibration hash.** A content hash of `data/calibration.json`
+  computed at load time is written to `metadata` so that any session
+  can be matched to the exact item-parameter set used to score it.
+
+These indicators are reported alongside the existing
+`valid_for_reporting`, `scoring_status`, and timing flags. They do
+not change live item selection, scoring, or stopping decisions.
 
 ---
 
@@ -521,25 +630,140 @@ without Jekyll processing.
 
 ---
 
-## Methodological References
+## 方法論的参考文献 / Methodological References
 
-The implementation follows standard CAT and IRT practice: EAP updating,
-information-based item selection, SE or maximum-length stopping, and post-hoc
-quality checks.
+LJT-CAT の実装は、CAT(Computerized Adaptive Testing)および IRT(Item Response Theory)
+の確立された方法論に基づいています。以下に、推定・項目選択・停止規則・努力モデレーション
+スコアリングなど、本ツールの設計の根拠となった主要文献をテーマ別に示します。
 
-Relevant references include:
+The LJT-CAT implementation is grounded in established CAT and IRT methodology.
+The references below are grouped by the design component they inform: EAP
+estimation, the PSER stopping rule, general CAT theory, vocabulary CAT
+applications in EFL contexts, and rapid-guessing / effort-moderated scoring.
 
-- Wainer, H. et al. (2000). *Computerized Adaptive Testing: A Primer*.
-- van der Linden, W. J., & Glas, C. A. W. (2010). *Elements of Adaptive Testing*.
-- Weiss, D. J. (1982). Improving measurement quality and efficiency with adaptive testing.
-- Choi, S. W., Grady, M. W., & Dodd, B. G. (2011). A new stopping rule for computerized adaptive testing.
-- Wise, S. L., & Kong, X. (2005). Response time effort.
-- Wise, S. L., & Ma, L. (2012). Setting response time thresholds for a CAT item pool.
-- Wise, S. L., & DeMars, C. E. (2006). Effort-moderated IRT scoring.
+### EAP estimation and quadrature
+
+- Bock, R. D., & Mislevy, R. J. (1982). Adaptive EAP estimation of ability in a microcomputer environment. *Applied Psychological Measurement*, *6*(4), 431–444. https://doi.org/10.1177/014662168200600405
+  - Foundation of the EAP-on-grid estimator and the quadrature formulas used in `cat_1f.js` and `cat_2f.js` (theta in [-6, 6], step 0.01, N(0, 1) prior).
+
+### PSER stopping rule
+
+- Choi, S. W., Grady, M. W., & Dodd, B. G. (2011). A new stopping rule for computerized adaptive testing. *Educational and Psychological Measurement*, *71*(1), 37–53. https://doi.org/10.1177/0013164410387338
+  - Original specification of the PSER (predicted standard error reduction) stopping rule that LJT-CAT uses by default via `blueprint_pser`.
+
+- Morris, S. B., Bass, M., Howard, E., & Neapolitan, R. E. (2020). Stopping rules for computer adaptive testing when item banks have nonuniform information. *International Journal of Testing*, *20*(2), 146–168. https://doi.org/10.1080/15305058.2019.1635604
+  - PSER tuning guidance for item banks with nonuniform information; basis for the LJT-CAT default `stop_pser = 0.01` (~20 items on average) and the alternative threshold guidance in the researcher panel.
+
+### CAT theory and general references
+
+- Babcock, B., & Weiss, D. J. (2009). Termination criteria in computerized adaptive testing: Variations on a theme of variance. *Proceedings of the 2009 GMAC Conference on Computerized Adaptive Testing*.
+  - Comparative analysis of CAT termination criteria informing LJT-CAT's choice between fixed-length, SE-based, and PSER-based stop rules.
+
+- van der Linden, W. J., & Glas, C. A. W. (Eds.). (2010). *Elements of adaptive testing*. Springer. https://doi.org/10.1007/978-0-387-85461-8
+  - Reference handbook for adaptive testing components (item selection, exposure control, content balancing) underlying the blueprint-constrained selection logic.
+
+- Wainer, H., Dorans, N. J., Eignor, D., Flaugher, R., Green, B. F., Mislevy, R. J., Steinberg, L., & Thissen, D. (2000). *Computerized adaptive testing: A primer* (2nd ed.). Lawrence Erlbaum.
+  - Canonical primer providing the overall CAT design rationale (item bank calibration, adaptive item selection, scoring) followed by LJT-CAT.
+
+- Weiss, D. J. (1982). Improving measurement quality and efficiency with adaptive testing. *Applied Psychological Measurement*, *6*(4), 473–492. https://doi.org/10.1177/014662168200600401
+  - Theoretical justification for using maximum Fisher information item selection to improve measurement precision and efficiency.
+
+### Vocabulary CAT applications (EFL context)
+
+- Aviad-Levitzky, T., Laufer, B., & Goldstein, Z. (2019). The new computer adaptive test of size and strength (CATSS): Development and validation. *Language Assessment Quarterly*, *16*(3), 345–368. https://doi.org/10.1080/15434303.2019.1649409
+  - Demonstrates CAT-based vocabulary assessment combining size and strength dimensions, informing LJT-CAT's lexicosemantic judgement framing.
+
+- Mizumoto, A., Sasao, Y., & Webb, S. (2019). Developing and evaluating a computerized adaptive testing version of the Word Part Levels Test. *Language Testing*, *36*(1), 101–123. https://doi.org/10.1177/0265532217725776
+  - Practical reference for CAT-based vocabulary testing with Japanese EFL learners; methodological precedent for LJT-CAT's target population and design.
+
+- Tseng, W.-T. (2016). Measuring English vocabulary size via computerized adaptive testing. *Computers & Education*, *97*, 69–85. https://doi.org/10.1016/j.compedu.2016.02.018
+  - Empirical demonstration of CAT efficiency for L2 vocabulary size estimation, supporting LJT-CAT's expectation of substantial item-count reduction relative to fixed-form testing.
+
+### Rapid-guessing and effort-moderated scoring
+
+- Wise, S. L., & DeMars, C. E. (2006). An application of item response time: The effort-moderated IRT model. *Journal of Educational Measurement*, *43*(1), 19–38. https://doi.org/10.1207/s15324818ame1901_2
+  - Effort-moderated IRT scoring framework underlying LJT-CAT's optional post-hoc rescoring that flags rapid-guessing responses.
+
+- Wise, S. L., & Kong, X. (2005). Response time effort: A new measure of examinee motivation in computer-based tests. *Applied Measurement in Education*, *18*(2), 163–183. https://doi.org/10.1207/s15324818ame1802_2
+  - Defines response time effort (RTE), the conceptual basis for LJT-CAT's rapid-guessing detection.
+
+- Wise, S. L., & Ma, L. (2012, April). Setting response time thresholds for a CAT item pool: The normative threshold method. Paper presented at the *Annual Meeting of the National Council on Measurement in Education*, Vancouver, Canada.
+  - Source of the normative threshold (NT) method; basis for LJT-CAT's default rapid-guessing threshold of NT = 350 ms.
 
 ---
 
-## License
+## 再現性 / Reproducibility
 
-This project may be used for research purposes. Please cite this repository when
-redistributing or publishing derivative work.
+LJT-CAT のセッション出力は、実装バージョンと項目パラメータの
+セットを一意に特定できるように設計されています。論文・報告書で
+本ツールを用いる場合は、以下の値をメソッドセクションまたは
+補足資料に記載することを推奨します。
+
+LJT-CAT session output is designed so that the running implementation
+and the exact item-parameter set can be identified unambiguously. When
+publishing or reporting analyses based on this tool, we recommend
+including the following fields from the Excel `metadata` sheet:
+
+- `app_version` - the LJT-CAT Web release version (semantic version,
+  e.g. `2.8.2`).
+- `asset_cache_version` - the static-asset cache key used by the
+  deployment, which pins the JavaScript, CSS, and audio bundle.
+- `calibration_hash` - a content hash of `data/calibration.json` at
+  the time the session ran. Two sessions with the same
+  `calibration_hash` were scored against bit-identical item parameters.
+
+For multi-site or longitudinal studies, archiving these three values
+alongside the raw `.xlsx` files is sufficient to reproduce scoring
+exactly, even after the public deployment is updated.
+
+A human-readable history of changes per release is maintained in
+[CHANGELOG.md](CHANGELOG.md), which follows the
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format and
+adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## アクセシビリティ / Accessibility
+
+LJT-CAT includes WCAG 2.2-aware features:
+
+- `:focus-visible` outline on all interactive controls (SC 2.4.7).
+- Skip-to-main link revealed on keyboard focus.
+- `aria-live="polite"` announcer (`#sr-announcer`) for phase changes.
+- `@media (prefers-reduced-motion: reduce)` disables transitions and
+  animations per OS preference.
+- Color contrast: text/background pairs audited against the SC 1.4.3
+  4.5:1 minimum.
+
+These features do not change live measurement; they only affect
+presentation.
+
+---
+
+## ライセンス / License
+
+LJT-CAT Web は **コードと素材で別ライセンス** を採用しています。
+LJT-CAT Web is distributed under **two licenses**: one for code and one for
+research materials.
+
+| Component | License | Coverage |
+|---|---|---|
+| **コード / Code** | [MIT License](LICENSE) | All JavaScript, CSS, HTML, Node.js test files, and documentation in this repository |
+| **素材 / Materials** | [CC BY-NC 4.0](LICENSE-MATERIALS.md) | All audio files under `audio/` and all JSON data files under `data/` (item calibration, stimulus metadata) |
+
+The MIT-licensed code may be reused freely, including in commercial projects.
+The CC BY-NC 4.0 materials require attribution and **may not be used for
+commercial purposes** without an explicit licensing arrangement with the
+maintainers — see `LICENSE-MATERIALS.md` for the rationale (calibrated IRT
+parameters are population-specific) and recommended attribution.
+
+The bundled `lib/xlsx.full.min.js` (SheetJS Community Edition) is distributed
+under the Apache License 2.0 by its original authors.
+
+## Citation
+
+When publishing research that uses LJT-CAT, please cite:
+
+> Komuro, R. (2026). *LJT-CAT Web: A computerized adaptive listening
+> vocabulary test.* GitHub repository.
+> https://github.com/Ryuya-dot-com/LJT_CAT
