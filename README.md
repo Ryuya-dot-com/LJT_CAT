@@ -1027,6 +1027,6 @@ under the Apache License 2.0 by its original authors.
 
 When publishing research that uses LJT-CAT, please cite:
 
-> Komuro, R. (2026). *LJT-CAT Web: A computerized adaptive listening
-> vocabulary test.* GitHub repository.
-> https://github.com/Ryuya-dot-com/LJT_CAT
+> Saito et al. (in preparation). *LJT_Short: Validation of the
+> Lexicosemantic Judgment Task as a Rapid Measure of L2 Listening
+> Proficiency in EFL Classrooms*.

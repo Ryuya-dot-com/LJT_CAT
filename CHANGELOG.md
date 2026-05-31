@@ -98,6 +98,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   default to Timed + auto-advance. The short classroom/screening profile
   remains Untimed + Space-key self-paced.
 - Default auto-paced post-response delay changed from 350 ms to 2000 ms.
+- Recommended citation updated to Saito et al. (in preparation),
+  *LJT_Short: Validation of the Lexicosemantic Judgment Task as a Rapid
+  Measure of L2 Listening Proficiency in EFL Classrooms*.
 - `cat_2f.js` header docstring corrected: item selection criterion is
   **A-optimality** (trace of Fisher info matrix), not D-optimality -
   the determinant collapses to zero for confirmatory 2PL items
