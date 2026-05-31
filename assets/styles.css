@@ -275,6 +275,41 @@ h3 {
   font-size: 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+.research-profile-advice {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border-left: 3px solid #2563eb;
+  border-radius: 4px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.research-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0 12px;
+}
+.research-methods-grid label {
+  margin: 0;
+}
+.research-methods-grid span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-neutral);
+}
+.research-methods-grid textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 126px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .research-action-row {
   display: flex;
   align-items: center;
@@ -696,6 +731,7 @@ footer a:hover { text-decoration: underline; }
   }
   .mode-grid,
   .research-control-grid,
+  .research-methods-grid,
   .research-summary-grid,
   .response-btns {
     grid-template-columns: 1fr;
@@ -764,10 +800,17 @@ footer a:hover { text-decoration: underline; }
 }
 small.research-help {
   display: block;
+  width: auto;
+  height: auto;
   margin-top: 0.3rem;
+  border-radius: 0;
+  background: transparent;
   color: #64748b;
   font-size: 0.78rem;
+  font-weight: 400;
   font-style: italic;
+  line-height: 1.4;
+  cursor: default;
 }
 
 .research-collapsible {

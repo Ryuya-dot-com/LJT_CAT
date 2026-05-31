@@ -3,7 +3,7 @@
  * Stages: welcome → instructions → practice → transition → main → result
  * URL parameters are controlled by adaptive/config.js.
  *                 ?lab=<labcode>
- *                 adaptive/: ?algorithm=blueprint|alternating|quota &stop_rule=blueprint_pser|pser|se|max_items
+ *                 adaptive/: ?algorithm=blueprint|alternating|quota &stop_rule=blueprint_pser|morris_pser|pser|se|max_items
  *                 adaptive/: ?target_se=0.30 &min_items=0 &max_items=160
  *                 ?max_play_fails=3 (audio failure skip threshold)
  *                 ?keymap=counterbalanced|f_appropriate|j_appropriate
@@ -22,7 +22,7 @@
   'use strict';
 
   const APP_VERSION = '2.8.2';
-  const ASSET_CACHE_VERSION = '20260428k';
+  const ASSET_CACHE_VERSION = '20260531a';
   const UX_INSTRUCTION_VERSION = 'practice_instructions_20260428_refined';
   // Captured at script-eval time so it can be reported as `code_loaded_at`
   // build/repro metadata in the Excel output (alongside session save time).
@@ -39,7 +39,10 @@
     min_items: 0,
     max_items: 160,
     max_play_fails: 3,
+    protocol_profile: 'custom',
     stop_pser: 0.01,
+    pser_hypo: 0.005,
+    pser_hyper: Infinity,
     quota_tol: 0.20,
     timing: 'timed',
     response_window_ms: 1250,
@@ -60,6 +63,48 @@
     // See Wise & Ma (2012); Wise & DeMars (2006). Live theta unaffected.
     nt_threshold_ms: 350
   }, APP_CONFIG.defaults || {});
+
+  const RESEARCH_PROTOCOL_PROFILES = {
+    custom: {
+      id: 'custom'
+    },
+    short_screening: {
+      id: 'short_screening',
+      stop_rule: 'morris_pser',
+      algorithm: 'blueprint',
+      min_items: 20,
+      max_items: 50,
+      target_se: 0.70,
+      pser_hypo: 0.005,
+      pser_hyper: 0.00835,
+      timing: 'untimed',
+      pace: 'self'
+    },
+    balanced_default: {
+      id: 'balanced_default',
+      stop_rule: 'morris_pser',
+      algorithm: 'blueprint',
+      min_items: 30,
+      max_items: 50,
+      target_se: 0.64,
+      pser_hypo: 0.005,
+      pser_hyper: Infinity,
+      timing: 'untimed',
+      pace: 'self'
+    },
+    precision_validation: {
+      id: 'precision_validation',
+      stop_rule: 'morris_pser',
+      algorithm: 'blueprint',
+      min_items: 30,
+      max_items: 60,
+      target_se: 0.60,
+      pser_hypo: 0.005,
+      pser_hyper: Infinity,
+      timing: 'untimed',
+      pace: 'self'
+    }
+  };
 
   const I18N = {
     ja: {
@@ -177,6 +222,17 @@
       researchColStimuli: '音声ファイル',
       researchProtocolTitle: '実施プロトコル設定',
       researchProtocolNote: 'ここで設定した内容は参加者用URLとExcelの protocol_manifest に保存されます。参加者画面では変更できません。',
+      researchProfileLabel: '研究用途プロファイル',
+      researchProfileCustom: 'Custom / 研究者設定',
+      researchProfileShort: 'Short / Screening',
+      researchProfileBalanced: 'Balanced / Default',
+      researchProfilePrecision: 'Precision / Validation',
+      researchProfileCustomAdvice: '研究者設定です。方法欄では全設定値を明示し、同一研究内で条件を混在させないでください。',
+      researchProfileShortAdvice: '短時間実施・大規模調査向けです。群平均や粗いスクリーニングには有用ですが、個人スコアの強い解釈は避けてください。',
+      researchProfileBalancedAdvice: '通常の研究用途向けの標準候補です。群比較、相関、回帰分析で最も説明しやすい設定です。',
+      researchProfilePrecisionAdvice: '妥当性検証・個人差研究向けです。時短より精度と固定長版との比較可能性を優先します。',
+      researchMethodsTitle: 'Methods用記述',
+      researchClassroomTitle: '教員・実施者向け説明',
       researchTimingModeLabel: '時間制限',
       researchDeliveryModeLabel: '実施モード',
       researchAdaptiveOption: 'Adaptive CAT',
@@ -204,11 +260,16 @@
       researchMaxItemsLabel: '最大項目数',
       researchTargetSeLabel: '目標SE',
       researchStopPserLabel: 'PSER停止しきい値',
+      researchPserHypoLabel: 'Morris hypoしきい値',
+      researchPserHyperLabel: 'Morris hyperしきい値',
       researchQuotaTolLabel: 'Quota許容幅',
       researchStopPserHelp: '平均20問前後を優先する推奨値は0.01です。小さくすると出題数が増え、推定精度は上がります。出典: Morris et al. (2020) によるPSERチューニング指針。',
+      researchPserHypoHelp: 'morris_pserで、目標SE未到達時に早期停止を許すPSERしきい値です。シミュレーション上の候補は0.005前後です。',
+      researchPserHyperHelp: 'morris_pserで、目標SE到達後も継続するためのPSERしきい値です。infは目標SE到達後に追加継続しない設定です。',
       researchStopPserGuide: '目安: 0.01 ≈ 平均20問、0.005 ≈ 平均34問、0.0025 ≈ 平均55問。',
       researchStopPserOutOfRange: '値が推奨範囲(0.001–0.05)外です。',
       researchStopRuleHelp_blueprint_pser: 'blueprint_pser: ブループリント制約付きPSER。最も推奨。',
+      researchStopRuleHelp_morris_pser: 'morris_pser: 目標SE、hypo、hyperの2段階PSER停止。シミュレーション選定用。',
       researchStopRuleHelp_pser: 'pser: PSER単独。Choi et al. (2011)。',
       researchStopRuleHelp_se: 'se: 標準誤差(SE)が target_se 未満で停止。',
       researchStopRuleHelp_max_items: 'max_items: 固定長(max_items まで実施)。',
@@ -395,6 +456,17 @@
       researchColStimuli: 'audio file',
       researchProtocolTitle: 'Administration Protocol Settings',
       researchProtocolNote: 'These settings are written to the participant URL and the Excel protocol_manifest sheet. Participants cannot change them.',
+      researchProfileLabel: 'Research-use profile',
+      researchProfileCustom: 'Custom / Researcher-defined',
+      researchProfileShort: 'Short / Screening',
+      researchProfileBalanced: 'Balanced / Default',
+      researchProfilePrecision: 'Precision / Validation',
+      researchProfileCustomAdvice: 'Researcher-defined protocol. Report all settings and avoid mixing protocols within the same study arm.',
+      researchProfileShortAdvice: 'For short large-scale or classroom administration. Useful for group-level screening; avoid strong individual-level interpretation.',
+      researchProfileBalancedAdvice: 'Standard candidate for general research use, group comparisons, correlations, and regression analyses.',
+      researchProfilePrecisionAdvice: 'For validation and individual-difference research. Prioritizes precision and fixed-form comparability over time saving.',
+      researchMethodsTitle: 'Methods Text',
+      researchClassroomTitle: 'Instructor / Administrator Text',
       researchTimingModeLabel: 'Timing mode',
       researchDeliveryModeLabel: 'Delivery mode',
       researchAdaptiveOption: 'Adaptive CAT',
@@ -422,11 +494,16 @@
       researchMaxItemsLabel: 'Maximum items',
       researchTargetSeLabel: 'Target SE',
       researchStopPserLabel: 'PSER stopping threshold',
+      researchPserHypoLabel: 'Morris hypo threshold',
+      researchPserHyperLabel: 'Morris hyper threshold',
       researchQuotaTolLabel: 'Quota tolerance',
       researchStopPserHelp: 'The recommended value for prioritizing about 20 items on average is 0.01. Smaller values increase test length and precision. Source: PSER tuning guidance from Morris et al. (2020).',
+      researchPserHypoHelp: 'For morris_pser, the early-stop PSER threshold before target SE is reached. Simulation candidates use about 0.005.',
+      researchPserHyperHelp: 'For morris_pser, the PSER threshold for continuing after target SE is reached. inf means no extra continuation after target SE.',
       researchStopPserGuide: 'Rule of thumb: 0.01 ≈ 20 items on average; 0.005 ≈ 34; 0.0025 ≈ 55.',
       researchStopPserOutOfRange: 'Value outside recommended range (0.001–0.05).',
       researchStopRuleHelp_blueprint_pser: 'blueprint_pser: PSER with content-blueprint constraints (recommended).',
+      researchStopRuleHelp_morris_pser: 'morris_pser: Two-threshold PSER using target SE, hypo, and hyper thresholds.',
       researchStopRuleHelp_pser: 'pser: Plain PSER, Choi et al. (2011).',
       researchStopRuleHelp_se: 'se: Stop when standard error reaches target_se.',
       researchStopRuleHelp_max_items: 'max_items: Fixed length (run to max_items).',
@@ -580,6 +657,19 @@
     return integer ? Math.round(out) : out;
   }
 
+  function boundedPserHyperValue (raw, def) {
+    const value = String(raw === undefined || raw === null ? '' : raw).trim().toLowerCase();
+    if (value === '') return def;
+    if (['inf', 'infinity', 'infinite', 'none', 'off'].includes(value)) return Infinity;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return def;
+    return Math.max(0.0001, Math.min(0.1, parsed));
+  }
+
+  function pserHyperParamValue (value) {
+    return Number.isFinite(value) ? String(value) : 'inf';
+  }
+
   function normalizeThetaGridParams () {
     if (state.params.theta_max <= state.params.theta_min) {
       state.params.theta_min = DEFAULTS.theta_min;
@@ -713,23 +803,36 @@
     );
     state.mode = '1F';
     state.labCode = p.get('lab') || '';
+    state.params.protocol_profile = normalizeProtocolProfile(
+      p.get('protocol_profile') || DEFAULTS.protocol_profile);
+    const protocolProfile = RESEARCH_PROTOCOL_PROFILES[state.params.protocol_profile] ||
+      RESEARCH_PROTOCOL_PROFILES.custom;
+    const profileDefault = (key, fallback) => (
+      protocolProfile &&
+      protocolProfile.id !== 'custom' &&
+      Object.prototype.hasOwnProperty.call(protocolProfile, key)
+    ) ? protocolProfile[key] : fallback;
     state.params.target_se = boundedNumberParam(
-      p, 'target_se', DEFAULTS.target_se, 0.05, 2.0, false);
+      p, 'target_se', profileDefault('target_se', DEFAULTS.target_se), 0.05, 2.0, false);
     state.params.min_items = boundedNumberParam(
-      p, 'min_items', DEFAULTS.min_items, 0, 160, true);
+      p, 'min_items', profileDefault('min_items', DEFAULTS.min_items), 0, 160, true);
     state.params.max_items = boundedNumberParam(
-      p, 'max_items', DEFAULTS.max_items, 1, 160, true);
+      p, 'max_items', profileDefault('max_items', DEFAULTS.max_items), 1, 160, true);
     state.params.max_play_fails = boundedNumberParam(
       p, 'max_play_fails', DEFAULTS.max_play_fails, 0, 10, true);
     state.params.stop_pser = boundedNumberParam(
       p, 'stop_pser', DEFAULTS.stop_pser, 0.0001, 0.1, false);
+    state.params.pser_hypo = boundedNumberParam(
+      p, 'pser_hypo', profileDefault('pser_hypo', DEFAULTS.pser_hypo), 0.0001, 0.1, false);
+    state.params.pser_hyper = boundedPserHyperValue(
+      p.get('pser_hyper'), profileDefault('pser_hyper', DEFAULTS.pser_hyper));
     state.params.quota_tol = boundedNumberParam(
       p, 'quota_tol', DEFAULTS.quota_tol, 0, 0.49, false);
     state.params.keymap = normalizeKeymap(
       p.get('keymap') || presentationOption('keymap', 'counterbalanced')
     );
     state.params.timing = normalizeTiming(
-      p.get('timing') || presentationOption('timing', DEFAULTS.timing)
+      p.get('timing') || profileDefault('timing', presentationOption('timing', DEFAULTS.timing))
     );
     state.params.response_window_ms = boundedNumberParam(
       p, 'response_window_ms',
@@ -756,7 +859,7 @@
       0, 5000, true);
     state.params.pace = booleanParam(p, 'self_paced', false)
       ? 'self'
-      : normalizePace(p.get('pace') || presentationOption('pace', DEFAULTS.pace));
+      : normalizePace(p.get('pace') || profileDefault('pace', presentationOption('pace', DEFAULTS.pace)));
     state.params.max_condition_run = boundedNumberParam(
       p, 'max_condition_run',
       Number(presentationOption('maxConditionRun', DEFAULTS.max_condition_run)),
@@ -785,8 +888,10 @@
       state.params.min_items = state.params.max_items;
     }
     if (state.delivery === 'adaptive') {
-      state.algorithm = normalizeAlgorithm(p.get('algorithm') || APP_CONFIG.defaultAlgorithm);
-      state.stopRule = normalizeStopRule(p.get('stop_rule') || APP_CONFIG.defaultStopRule);
+      state.algorithm = normalizeAlgorithm(
+        p.get('algorithm') || profileDefault('algorithm', APP_CONFIG.defaultAlgorithm));
+      state.stopRule = normalizeStopRule(
+        p.get('stop_rule') || profileDefault('stop_rule', APP_CONFIG.defaultStopRule));
       const adaptiveBounds = adaptiveItemBounds();
       state.params.min_items = Math.min(
         Math.max(state.params.min_items, adaptiveBounds.floor),
@@ -941,9 +1046,32 @@
 
   function normalizeStopRule (raw) {
     const value = String(raw || '').trim().toLowerCase();
-    return ['blueprint_pser', 'pser', 'se', 'max_items'].includes(value)
+    return ['blueprint_pser', 'morris_pser', 'pser', 'se', 'max_items'].includes(value)
       ? value
       : 'blueprint_pser';
+  }
+
+  function normalizeProtocolProfile (raw) {
+    const value = String(raw || '').trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(RESEARCH_PROTOCOL_PROFILES, value)
+      ? value
+      : 'custom';
+  }
+
+  function protocolProfileLabel (profileId) {
+    const id = normalizeProtocolProfile(profileId);
+    if (id === 'short_screening') return t('researchProfileShort');
+    if (id === 'balanced_default') return t('researchProfileBalanced');
+    if (id === 'precision_validation') return t('researchProfilePrecision');
+    return t('researchProfileCustom');
+  }
+
+  function protocolProfileAdvice (profileId) {
+    const id = normalizeProtocolProfile(profileId);
+    if (id === 'short_screening') return t('researchProfileShortAdvice');
+    if (id === 'balanced_default') return t('researchProfileBalancedAdvice');
+    if (id === 'precision_validation') return t('researchProfilePrecisionAdvice');
+    return t('researchProfileCustomAdvice');
   }
 
   function normalizeDelivery (raw) {
@@ -1041,6 +1169,11 @@
       2000,
       true
     );
+    const protocolProfile = normalizeProtocolProfile(
+      opts.protocol_profile === undefined
+        ? state.params.protocol_profile
+        : opts.protocol_profile
+    );
     const pace = normalizePace(opts.pace || state.params.pace || DEFAULTS.pace);
     const keymap = normalizeKeymap(opts.keymap || state.params.keymap);
     let thetaMin = boundedNumberValue(
@@ -1072,6 +1205,7 @@
     u.pathname = deliveryPathname(u.pathname, delivery);
     if (state.labCode) u.searchParams.set('lab', state.labCode);
     u.searchParams.set('lang', state.lang);
+    u.searchParams.set('protocol_profile', protocolProfile);
     u.searchParams.set('timing', mode);
     u.searchParams.set('auto_play_audio', boolToParam(autoPlay));
     u.searchParams.set('audio_rate', String(Number(audioRate.toFixed(2))));
@@ -1126,11 +1260,17 @@
       u.searchParams.set('stop_pser', String(
         boundedNumberValue(opts.stop_pser === undefined ? state.params.stop_pser : opts.stop_pser, DEFAULTS.stop_pser, 0.0001, 0.1, false)
       ));
+      u.searchParams.set('pser_hypo', String(
+        boundedNumberValue(opts.pser_hypo === undefined ? state.params.pser_hypo : opts.pser_hypo, DEFAULTS.pser_hypo, 0.0001, 0.1, false)
+      ));
+      u.searchParams.set('pser_hyper', pserHyperParamValue(
+        boundedPserHyperValue(opts.pser_hyper === undefined ? state.params.pser_hyper : opts.pser_hyper, DEFAULTS.pser_hyper)
+      ));
       u.searchParams.set('quota_tol', String(
         boundedNumberValue(opts.quota_tol === undefined ? state.params.quota_tol : opts.quota_tol, DEFAULTS.quota_tol, 0, 0.49, false)
       ));
     } else {
-      ['algorithm', 'stop_rule', 'min_items', 'max_items', 'target_se', 'stop_pser', 'quota_tol']
+      ['algorithm', 'stop_rule', 'min_items', 'max_items', 'target_se', 'stop_pser', 'pser_hypo', 'pser_hyper', 'quota_tol']
         .forEach(name => u.searchParams.delete(name));
     }
     if (keepResearch) {
@@ -1780,7 +1920,12 @@
         uuid:           state.session.uuid,
         mode:           state.delivery === 'adaptive' ? state.mode : state.delivery,
         lab_code:       state.labCode,
+        protocol_profile: state.params.protocol_profile,
         target_se:      state.params.target_se,
+        stop_rule:      state.stopRule,
+        stop_pser:      state.params.stop_pser,
+        pser_hypo:      state.params.pser_hypo,
+        pser_hyper:     pserHyperParamValue(state.params.pser_hyper),
         min_items:      state.params.min_items,
         max_items:      state.params.max_items,
         max_play_fails: state.params.max_play_fails,
@@ -2051,7 +2196,83 @@
     }
   }
 
+  function buildResearchMethodsText (overrides) {
+    const o = overrides || {};
+    const profile = normalizeProtocolProfile(o.protocol_profile || state.params.protocol_profile);
+    const timing = normalizeTiming(o.timing || state.params.timing);
+    const responseWindow = boundedNumberValue(
+      o.response_window_ms === undefined ? state.params.response_window_ms : o.response_window_ms,
+      DEFAULTS.response_window_ms,
+      250,
+      10000,
+      true
+    );
+    const minItems = boundedNumberValue(o.min_items, state.params.min_items, 0, 160, true);
+    const maxItems = boundedNumberValue(o.max_items, state.params.max_items, 1, 160, true);
+    const algorithm = normalizeAlgorithm(o.algorithm || state.algorithm);
+    const stopRule = normalizeStopRule(o.stop_rule || state.stopRule);
+    const targetSe = boundedNumberValue(o.target_se, state.params.target_se, 0.05, 2.0, false);
+    const stopPser = boundedNumberValue(o.stop_pser, state.params.stop_pser, 0.0001, 0.1, false);
+    const pserHypo = boundedNumberValue(o.pser_hypo, state.params.pser_hypo, 0.0001, 0.1, false);
+    const pserHyper = pserHyperParamValue(boundedPserHyperValue(o.pser_hyper, state.params.pser_hyper));
+    const stopConfigText = state.lang === 'ja'
+      ? (stopRule === 'morris_pser'
+          ? 'target_se=' + targetSe + '、pser_hypo=' + pserHypo + '、pser_hyper=' + pserHyper
+          : stopRule === 'se'
+            ? 'target_se=' + targetSe
+            : stopRule === 'max_items'
+              ? 'max_items=' + maxItems
+              : 'stop_pser=' + stopPser)
+      : (stopRule === 'morris_pser'
+          ? 'target_se=' + targetSe + ', pser_hypo=' + pserHypo + ', and pser_hyper=' + pserHyper
+          : stopRule === 'se'
+            ? 'target_se=' + targetSe
+            : stopRule === 'max_items'
+              ? 'max_items=' + maxItems
+              : 'stop_pser=' + stopPser);
+    const timingText = timing === 'timed'
+      ? (state.lang === 'ja'
+          ? 'Timed条件（音声終了後 ' + responseWindow + ' ms）'
+          : 'timed administration with a ' + responseWindow + ' ms response window after audio offset')
+      : (state.lang === 'ja' ? 'Untimed・自己ペース条件' : 'untimed, self-paced administration');
+    if (state.lang === 'ja') {
+      return '本研究では、LJT-CATを' + protocolProfileLabel(profile) +
+        'プロファイルで実施した。CATはHit/CRの2条件別1D 2PL EAP推定で採点し、項目選択は ' +
+        algorithm + ' アルゴリズムを用いた。停止則は ' +
+        stopRule + '、最小項目数 ' + minItems + '、最大項目数 ' + maxItems +
+        '、' + stopConfigText + ' とした。実施は' + timingText +
+        'で行い、F/Jキー割当、反応時間、停止理由、提示項目数、Hit/CR別項目数、全URL由来設定をExcelのmetadataおよびprotocol_manifestに保存した。';
+    }
+    return 'The LJT-CAT was administered using the ' + protocolProfileLabel(profile) +
+      ' profile. The CAT was scored with per-condition Hit/CR 1D 2PL EAP estimation, and item selection used the ' +
+      algorithm + ' algorithm. The stopping rule was ' +
+      stopRule + ', with min_items=' + minItems + ', max_items=' + maxItems +
+      ', and ' + stopConfigText + '. Administration used ' + timingText +
+      '. The F/J key mapping, response times, stopping reason, administered item count, Hit/CR counts, and URL-derived protocol settings were saved in the Excel metadata and protocol_manifest sheets.';
+  }
+
+  function buildResearchClassroomText (overrides) {
+    const o = overrides || {};
+    const timing = normalizeTiming(o.timing || state.params.timing);
+    const profile = normalizeProtocolProfile(o.protocol_profile || state.params.protocol_profile);
+    if (state.lang === 'ja') {
+      return '実施者向け: 参加者にはデスクトップ版Chrome、ヘッドホンまたはイヤホン、静かな環境を用意してもらってください。プロファイルは ' +
+        protocolProfileLabel(profile) + ' です。' +
+        (timing === 'timed'
+          ? 'Timed条件のため、回答が遅い場合はタイムアウトとして記録されます。'
+          : 'Untimed条件のため、参加者は自分のペースで回答できます。') +
+        '終了後に自動ダウンロードされる.xlsxファイルを回収し、quality_flags、timeout_rate、音声再生失敗、最低項目数未達の有無を確認してください。';
+    }
+    return 'Administrator note: Participants should use desktop Chrome with headphones or earphones in a quiet setting. The selected profile is ' +
+      protocolProfileLabel(profile) + '. ' +
+      (timing === 'timed'
+        ? 'Because this is a timed condition, late responses are recorded as timeouts. '
+        : 'Because this is an untimed condition, participants can respond at their own pace. ') +
+      'After completion, collect the downloaded .xlsx file and check quality_flags, timeout_rate, audio playback failures, and minimum-item coverage.';
+  }
+
   function bindResearchPanelControls () {
+    const profileEl = $('research-protocol-profile');
     const timingEl = $('research-timing-mode');
     const presetEl = $('research-window-preset');
     const customEl = $('research-window-custom');
@@ -2077,6 +2298,8 @@
     const maxItemsEl = $('research-max-items');
     const targetSeEl = $('research-target-se');
     const stopPserEl = $('research-stop-pser');
+    const pserHypoEl = $('research-pser-hypo');
+    const pserHyperEl = $('research-pser-hyper');
     const quotaTolEl = $('research-quota-tol');
     const applyEl = $('research-apply-protocol');
     const copyEl = $('research-copy-url');
@@ -2087,6 +2310,7 @@
     const readOverrides = () => {
       return {
         delivery: 'adaptive',
+        protocol_profile: profileEl ? profileEl.value : state.params.protocol_profile,
         timing: timingEl.value,
         response_window_ms: presetEl.value === 'custom' ? customEl.value : presetEl.value,
         keymap: keymapEl ? keymapEl.value : state.params.keymap,
@@ -2109,6 +2333,8 @@
         max_items: maxItemsEl ? maxItemsEl.value : DEFAULTS.max_items,
         target_se: targetSeEl ? targetSeEl.value : DEFAULTS.target_se,
         stop_pser: stopPserEl ? stopPserEl.value : DEFAULTS.stop_pser,
+        pser_hypo: pserHypoEl ? pserHypoEl.value : DEFAULTS.pser_hypo,
+        pser_hyper: pserHyperEl ? pserHyperEl.value : DEFAULTS.pser_hyper,
         quota_tol: quotaTolEl ? quotaTolEl.value : DEFAULTS.quota_tol
       };
     };
@@ -2147,24 +2373,63 @@
           stopPserWarn.hidden = true;
         }
       }
+      const profileAdviceEl = $('research-profile-advice');
+      if (profileAdviceEl) {
+        profileAdviceEl.textContent = protocolProfileAdvice(overrides.protocol_profile);
+      }
+      const methodsTextEl = $('research-methods-text');
+      if (methodsTextEl) {
+        methodsTextEl.value = buildResearchMethodsText(overrides);
+      }
+      const classroomTextEl = $('research-classroom-text');
+      if (classroomTextEl) {
+        classroomTextEl.value = buildResearchClassroomText(overrides);
+      }
       urlEl.value = buildProtocolURL(false, overrides);
     };
 
-    timingEl.addEventListener('change', refreshControls);
-    presetEl.addEventListener('change', refreshControls);
-    customEl.addEventListener('input', refreshControls);
+    const markCustomAndRefresh = () => {
+      if (profileEl) profileEl.value = 'custom';
+      refreshControls();
+    };
+
+    const applyProfileToControls = profileId => {
+      const profile = RESEARCH_PROTOCOL_PROFILES[normalizeProtocolProfile(profileId)];
+      if (!profile || profile.id === 'custom') return;
+      if (timingEl) timingEl.value = profile.timing;
+      if (paceEl) paceEl.value = profile.pace;
+      if (algorithmEl) algorithmEl.value = profile.algorithm;
+      if (stopRuleEl) stopRuleEl.value = profile.stop_rule;
+      if (minItemsEl) minItemsEl.value = String(profile.min_items);
+      if (maxItemsEl) maxItemsEl.value = String(profile.max_items);
+      if (targetSeEl) targetSeEl.value = String(profile.target_se);
+      if (pserHypoEl) pserHypoEl.value = String(profile.pser_hypo);
+      if (pserHyperEl) pserHyperEl.value = pserHyperParamValue(profile.pser_hyper);
+    };
+
+    if (profileEl) {
+      profileEl.addEventListener('change', () => {
+        applyProfileToControls(profileEl.value);
+        refreshControls();
+      });
+    }
+    timingEl.addEventListener('change', markCustomAndRefresh);
+    presetEl.addEventListener('change', markCustomAndRefresh);
+    customEl.addEventListener('input', markCustomAndRefresh);
     [
       keymapEl, autoPlayEl, audioRateEl, fixationEl, postResponseEl, paceEl, maxRunEl, maxFailsEl,
       thetaMinEl, thetaMaxEl, thetaStepEl, theta2MinEl, theta2MaxEl, theta2StepEl,
-      algorithmEl, stopRuleEl, minItemsEl, maxItemsEl, targetSeEl, stopPserEl, quotaTolEl
+      algorithmEl, stopRuleEl, minItemsEl, maxItemsEl, targetSeEl, stopPserEl,
+      pserHypoEl, pserHyperEl, quotaTolEl
     ].forEach(el => {
       if (!el) return;
-      el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', refreshControls);
+      el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', markCustomAndRefresh);
     });
 
     if (applyEl) {
       applyEl.addEventListener('click', () => {
         const overrides = readOverrides();
+        state.params.protocol_profile = normalizeProtocolProfile(overrides.protocol_profile);
         state.params.timing = normalizeTiming(overrides.timing);
         if (state.params.timing === 'timed') {
           state.params.response_window_ms = boundedNumberValue(
@@ -2218,6 +2483,8 @@
           }
           state.params.target_se = boundedNumberValue(overrides.target_se, DEFAULTS.target_se, 0.05, 2.0, false);
           state.params.stop_pser = boundedNumberValue(overrides.stop_pser, DEFAULTS.stop_pser, 0.0001, 0.1, false);
+          state.params.pser_hypo = boundedNumberValue(overrides.pser_hypo, DEFAULTS.pser_hypo, 0.0001, 0.1, false);
+          state.params.pser_hyper = boundedPserHyperValue(overrides.pser_hyper, DEFAULTS.pser_hyper);
           state.params.quota_tol = boundedNumberValue(overrides.quota_tol, DEFAULTS.quota_tol, 0, 0.49, false);
         }
         updateURLFromProtocol(true, overrides);
@@ -2226,6 +2493,7 @@
         updatePresentationInstruction();
         logEvent('research_protocol_applied', {
           delivery: state.delivery,
+          protocol_profile: state.params.protocol_profile,
           timing_mode: state.params.timing,
           response_window_ms: responseWindowMs(),
           auto_play_audio: autoPlayAudio(),
@@ -2321,6 +2589,13 @@
     const currentWindow = responseWindowMs() || DEFAULTS.response_window_ms;
     const keymap = normalizeKeymap(state.params.keymap);
     const adaptiveBounds = adaptiveItemBounds();
+    const protocolProfile = normalizeProtocolProfile(state.params.protocol_profile);
+    const protocolProfileOptions = [
+      ['custom', t('researchProfileCustom')],
+      ['short_screening', t('researchProfileShort')],
+      ['balanced_default', t('researchProfileBalanced')],
+      ['precision_validation', t('researchProfilePrecision')]
+    ];
     const adaptiveProtocolHtml = state.delivery === 'adaptive'
       ? '<details class="research-collapsible" open>' +
           '<summary>' + escapeHtml(t('researchAdaptiveSettingsTitle')) + '</summary>' +
@@ -2334,7 +2609,7 @@
               '</select></label>' +
             '<label><span>' + escapeHtml(t('researchStopRuleLabel')) + '</span>' +
               '<select id="research-stop-rule">' +
-                ['blueprint_pser', 'pser', 'se', 'max_items'].map(value =>
+                ['blueprint_pser', 'morris_pser', 'pser', 'se', 'max_items'].map(value =>
                   '<option value="' + value + '"' +
                     (state.stopRule === value ? ' selected' : '') +
                     ' title="' + escapeHtml(t('researchStopRuleHelp_' + value)) + '">' +
@@ -2359,6 +2634,12 @@
                 escapeHtml(state.params.stop_pser) + '" />' +
               '<small>' + escapeHtml(t('researchStopPserGuide')) + '</small>' +
               '<small id="research-stop-pser-warning" class="research-warning" hidden></small></label>' +
+            '<label>' + researchLabel(t('researchPserHypoLabel'), t('researchPserHypoHelp')) +
+              '<input type="number" id="research-pser-hypo" min="0.0001" max="0.1" step="0.0005" value="' +
+                escapeHtml(state.params.pser_hypo) + '" /></label>' +
+            '<label>' + researchLabel(t('researchPserHyperLabel'), t('researchPserHyperHelp')) +
+              '<input type="text" id="research-pser-hyper" value="' +
+                escapeHtml(pserHyperParamValue(state.params.pser_hyper)) + '" /></label>' +
             '<label><span>' + escapeHtml(t('researchQuotaTolLabel')) + '</span>' +
               '<input type="number" id="research-quota-tol" min="0" max="0.49" step="0.01" value="' +
                 escapeHtml(state.params.quota_tol) + '" /></label>' +
@@ -2445,6 +2726,14 @@
         '<h4>' + escapeHtml(t('researchProtocolTitle')) + '</h4>' +
         '<p class="research-model">' + escapeHtml(t('researchProtocolNote')) + '</p>' +
         '<div class="research-control-grid">' +
+          '<label><span>' + escapeHtml(t('researchProfileLabel')) + '</span>' +
+            '<select id="research-protocol-profile">' +
+              protocolProfileOptions.map(option =>
+                '<option value="' + escapeHtml(option[0]) + '"' +
+                  (protocolProfile === option[0] ? ' selected' : '') + '>' +
+                  escapeHtml(option[1]) + '</option>'
+              ).join('') +
+            '</select></label>' +
           '<label><span>' + escapeHtml(t('researchDeliveryModeLabel')) + '</span>' +
             '<output>' + escapeHtml(t('researchAdaptiveOption')) + '</output></label>' +
           '<label><span>' + escapeHtml(t('researchTimingModeLabel')) + '</span>' +
@@ -2509,6 +2798,8 @@
                 escapeHtml(t('researchKeymapJAppropriate')) + '</option>' +
             '</select></label>' +
         '</div>' +
+        '<p id="research-profile-advice" class="research-profile-advice">' +
+          escapeHtml(protocolProfileAdvice(protocolProfile)) + '</p>' +
         adaptiveProtocolHtml +
         numericalSettingsHtml +
         referencesHtml +
@@ -2517,6 +2808,14 @@
           '<label><span>' + escapeHtml(t('researchParticipantUrlLabel')) + '</span>' +
             '<input type="text" id="research-participant-url" readonly value="' +
               escapeHtml(participantProtocolURL()) + '" /></label>' +
+        '</div>' +
+        '<div class="research-methods-grid">' +
+          '<label><span>' + escapeHtml(t('researchMethodsTitle')) + '</span>' +
+            '<textarea id="research-methods-text" readonly rows="5">' +
+              escapeHtml(buildResearchMethodsText()) + '</textarea></label>' +
+          '<label><span>' + escapeHtml(t('researchClassroomTitle')) + '</span>' +
+            '<textarea id="research-classroom-text" readonly rows="5">' +
+              escapeHtml(buildResearchClassroomText()) + '</textarea></label>' +
         '</div>' +
         '<div class="research-action-row">' +
           '<button type="button" id="research-apply-protocol" class="secondary-btn">' +
@@ -3076,7 +3375,7 @@
 
   function shouldStopAfterCandidate (sel) {
     if (state.delivery !== 'adaptive' ||
-        !['pser', 'blueprint_pser'].includes(state.stopRule)) {
+        !['pser', 'blueprint_pser', 'morris_pser'].includes(state.stopRule)) {
       return { stop: false };
     }
     const n = state.cat.usedCount();
@@ -3087,6 +3386,14 @@
       ? state.cat.predictedSeReduction(sel)
       : null;
     if (pred && Number.isFinite(pred.reduction)) {
+      if (state.stopRule === 'morris_pser') {
+        const se = currentPrecisionSE();
+        if (pred.reduction >= state.params.pser_hyper) return { stop: false };
+        if (se < state.params.target_se) return { stop: true, reason: 'morris_precision' };
+        return pred.reduction < state.params.pser_hypo
+          ? { stop: true, reason: 'morris_hypo' }
+          : { stop: false };
+      }
       return pred.reduction < state.params.stop_pser
         ? { stop: true, reason: state.stopRule }
         : { stop: false };
@@ -3094,6 +3401,14 @@
     const se = currentPrecisionSE();
     if (!Number.isFinite(se) || se <= 0) return { stop: false };
     const seNew = 1 / Math.sqrt(1 / (se * se) + sel.info);
+    if (state.stopRule === 'morris_pser') {
+      const reduction = se - seNew;
+      if (reduction >= state.params.pser_hyper) return { stop: false };
+      if (se < state.params.target_se) return { stop: true, reason: 'morris_precision' };
+      return reduction < state.params.pser_hypo
+        ? { stop: true, reason: 'morris_hypo' }
+        : { stop: false };
+    }
     return (se - seNew) < state.params.stop_pser
       ? { stop: true, reason: 'pser' }
       : { stop: false };
@@ -3509,6 +3824,7 @@
       language: state.lang,
       research_mode: state.researchMode,
       lab_code: state.labCode,
+      protocol_profile: state.params.protocol_profile,
       participant_url: participantProtocolURL(),
       research_url: researchURL(),
       timing: {
@@ -3563,6 +3879,8 @@
         max_items: state.params.max_items,
         target_se: state.params.target_se,
         stop_pser: state.params.stop_pser,
+        pser_hypo: state.params.pser_hypo,
+        pser_hyper: pserHyperParamValue(state.params.pser_hyper),
         quota_tol: state.params.quota_tol
       },
       // Auxiliary NT-filtered scoring config (Wise & Ma 2012; Wise & Kong 2005;
@@ -3844,7 +4162,7 @@
       se_mirt_f1:         (validForReporting && Number.isFinite(mirt2f.se1))    ? round6(mirt2f.se1)    : null,
       theta_mirt_f2:      (validForReporting && Number.isFinite(mirt2f.theta2)) ? round6(mirt2f.theta2) : null,
       se_mirt_f2:         (validForReporting && Number.isFinite(mirt2f.se2))    ? round6(mirt2f.se2)    : null,
-      reached_precision:  (stopReason === 'precision'),
+      reached_precision:  ['precision', 'morris_precision'].includes(stopReason),
       percentile:         pct,
       toeic_estimate:     toeic ? round2(toeic.estimate) : null,
       toeic_estimate_se:  toeic ? round2(toeic.se) : null,
@@ -3964,7 +4282,11 @@
     state.session.delivery = state.delivery;
     state.session.algorithm = state.delivery === 'adaptive' ? state.algorithm : '';
     state.session.stop_rule = state.stopRule;
+    state.session.protocol_profile = state.params.protocol_profile;
+    state.session.target_se = state.params.target_se;
     state.session.stop_pser = state.params.stop_pser;
+    state.session.pser_hypo = state.params.pser_hypo;
+    state.session.pser_hyper = pserHyperParamValue(state.params.pser_hyper);
     state.session.quota_tol = state.params.quota_tol;
     logEvent('main_finish', {
       stop_reason: stopReason,
@@ -4052,7 +4374,12 @@
         uuid:           state.session.uuid,
         mode:           state.delivery === 'adaptive' ? state.mode : state.delivery,
         lab_code:       state.labCode,
+        protocol_profile: state.params.protocol_profile,
         target_se:      state.params.target_se,
+        stop_rule:      state.stopRule,
+        stop_pser:      state.params.stop_pser,
+        pser_hypo:      state.params.pser_hypo,
+        pser_hyper:     pserHyperParamValue(state.params.pser_hyper),
         min_items:      state.params.min_items,
         max_items:      state.params.max_items,
         max_play_fails: state.params.max_play_fails,

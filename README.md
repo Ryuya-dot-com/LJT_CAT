@@ -235,6 +235,7 @@ Supported stop rules:
 | Stop rule | Meaning |
 |---|---|
 | `blueprint_pser` | Default. Stop when blueprint-aware predicted SE reduction is below `stop_pser` |
+| `morris_pser` | Morris-style two-threshold PSER using `target_se`, `pser_hypo`, and `pser_hyper` |
 | `pser` | Stop when predicted SE reduction is below `stop_pser` |
 | `se` | Stop when precision reaches `target_se` |
 | `max_items` | Stop only at `max_items` or bank exhaustion |
@@ -246,6 +247,7 @@ Examples:
 
 ```text
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?min_items=20&max_items=160
+https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=morris_pser&min_items=30&max_items=60&target_se=0.60&pser_hypo=0.005&pser_hyper=inf
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=se&target_se=0.30
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=max_items&max_items=80
 ```
@@ -277,12 +279,15 @@ https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=max_items&max_items=
 
 | Parameter | Default | Meaning |
 |---|---:|---|
+| `protocol_profile` | `custom` | `custom`, `short_screening`, `balanced_default`, or `precision_validation`; presets for research-use CAT protocols |
 | `algorithm` | `blueprint` | `blueprint`, `alternating`, or `quota` |
-| `stop_rule` | `blueprint_pser` | `blueprint_pser`, `pser`, `se`, or `max_items` |
+| `stop_rule` | `blueprint_pser` | `blueprint_pser`, `morris_pser`, `pser`, `se`, or `max_items` |
 | `min_items` | `0` | Minimum administered items before adaptive stopping can apply |
 | `max_items` | `160` | Maximum administered items |
-| `target_se` | `0.30` | Target SE when `stop_rule=se` |
-| `stop_pser` | `0.01` | Predicted SE reduction threshold |
+| `target_se` | `0.30` | Target SE when `stop_rule=se` or `morris_pser` |
+| `stop_pser` | `0.01` | Predicted SE reduction threshold for `pser` and `blueprint_pser` |
+| `pser_hypo` | `0.005` | Morris-style early-stop threshold before `target_se` is reached |
+| `pser_hyper` | `inf` | Morris-style continuation threshold after `target_se`; use `inf` for no extra continuation |
 | `quota_tol` | `0.20` | Hit-ratio tolerance for quota CAT |
 
 ### EAP Grid
@@ -304,6 +309,8 @@ https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?lang=en
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?lab=YOUR_LAB_CODE
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?timing=untimed&pace=self
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?max_items=80
+https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?protocol_profile=balanced_default&research=1
+https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=morris_pser&min_items=30&max_items=60&target_se=0.60&pser_hypo=0.005&pser_hyper=inf&timing=untimed&pace=self
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=se&target_se=0.30
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?nt_threshold_ms=500
 ```
@@ -332,9 +339,12 @@ The panel displays:
 - Item difficulty `b`.
 - Current protocol settings.
 - Generated participant URL.
+- Research-use protocol profile selector.
+- Generated Methods text and instructor/administrator text.
 
 Researchers can configure:
 
+- Research-use protocol profile.
 - Timed or untimed administration.
 - Response window.
 - Audio autoplay.
@@ -347,6 +357,7 @@ Researchers can configure:
 - `F` / `J` key mapping.
 - Adaptive algorithm.
 - Stop rule.
+- PSER and Morris-style stopping thresholds.
 - Minimum and maximum item counts.
 - EAP grid settings.
 
@@ -364,11 +375,37 @@ section.
 
 ---
 
+## Research Protocol Profiles
+
+Researchers may choose different CAT lengths and timing modes depending on the
+study purpose. For comparability, use one of these profiles unless the study
+has a documented reason to customize the protocol.
+
+| Profile | Typical use | Suggested URL parameters | Interpretation |
+|---|---|---|---|
+| Short / Screening | Large surveys, classroom administration, group-level screening | `protocol_profile=short_screening&stop_rule=morris_pser&min_items=20&max_items=50&target_se=0.70&pser_hypo=0.005&pser_hyper=0.00835&timing=untimed&pace=self` | Efficient, but avoid strong individual-level interpretation |
+| Balanced / Default | General research, group comparisons, correlation/regression | `protocol_profile=balanced_default&stop_rule=morris_pser&min_items=30&max_items=50&target_se=0.64&pser_hypo=0.005&pser_hyper=inf&timing=untimed&pace=self` | Recommended default for most research use |
+| Precision / Validation | Validation, criterion-related studies, individual-difference research | `protocol_profile=precision_validation&stop_rule=morris_pser&min_items=30&max_items=60&target_se=0.60&pser_hypo=0.005&pser_hyper=inf&timing=untimed&pace=self` | More conservative; prioritizes precision over time saving |
+
+`timing=untimed&pace=self` is the safest default when the construct of
+interest is listening judgment ability. Timed administration is supported with
+`timing=timed&response_window_ms=1250`, but it should be treated as a distinct
+condition because it also reflects processing speed, attention, and test-taking
+strategy. Custom protocols are allowed, but `min_items`, `max_items`,
+`stop_rule`, `target_se`, `pser_hypo`, `pser_hyper`, `timing`, and
+`response_window_ms` must be reported from the workbook metadata.
+
+The researcher panel exposes these profiles in a selector. Selecting a profile
+updates the CAT parameters and regenerates both the participant URL and short
+text blocks for Methods sections and classroom/administrator instructions.
+
+---
+
 ## Recommended Study Setup
 
 1. Open `/adaptive/?research=1`.
-2. Set the intended protocol parameters.
-3. Confirm the candidate bank and timing settings.
+2. Choose a research-use profile or set the intended custom protocol parameters.
+3. Confirm the candidate bank, timing settings, and generated Methods text.
 4. Copy the generated participant URL.
 5. Distribute that URL to participants.
 6. Instruct participants to use desktop Chrome and headphones.

@@ -53,6 +53,8 @@ window.LJT_APP_CONFIG = {
     audio_rate: 1.0,
     lang: 'ja',
     stop_pser: 0.01,
+    pser_hypo: 0.005,
+    pser_hyper: Infinity,
     quota_tol: 0.20,
     max_play_fails: 3,
     theta_min: -6,

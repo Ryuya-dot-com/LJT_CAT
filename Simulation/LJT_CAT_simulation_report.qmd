@@ -1,0 +1,2004 @@
+---
+title: "LJT-CAT Stopping Rule Simulation Report"
+subtitle: "固定長版とCAT版の測定精度・項目数・項目露出の比較"
+author: "UCL_LJT"
+date: last-modified
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: false
+    code-fold: true
+    code-summary: "Rコードを表示"
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(readr)
+library(scales)
+library(knitr)
+library(kableExtra)
+
+input_path <- knitr::current_input(dir = TRUE)
+report_dir <- if (!is.null(input_path) && nzchar(input_path)) {
+  dirname(normalizePath(input_path, mustWork = TRUE))
+} else {
+  normalizePath(".", mustWork = TRUE)
+}
+output_dir <- Sys.getenv(
+  "LJT_CAT_REPORT_OUTPUT_DIR",
+  unset = file.path(report_dir, "outputs")
+)
+if (!nzchar(output_dir)) output_dir <- file.path(report_dir, "outputs")
+
+required_files <- c(
+  "cat_condition_summary.csv",
+  "simulated_person_results.csv",
+  "cat_summary_by_theta_bin.csv",
+  "cat_stop_reason_summary.csv",
+  "cat_item_exposure.csv"
+)
+missing_files <- required_files[!file.exists(file.path(output_dir, required_files))]
+if (length(missing_files) > 0) {
+  stop(
+    "Simulation outputs are missing: ",
+    paste(missing_files, collapse = ", "),
+    "\nRun: Rscript Simulation/simulate_ljt_cat_stopping.R",
+    call. = FALSE
+  )
+}
+
+summary_tbl <- readr::read_csv(
+  file.path(output_dir, "cat_condition_summary.csv"),
+  show_col_types = FALSE
+)
+person_tbl <- readr::read_csv(
+  file.path(output_dir, "simulated_person_results.csv"),
+  show_col_types = FALSE
+)
+theta_tbl <- readr::read_csv(
+  file.path(output_dir, "cat_summary_by_theta_bin.csv"),
+  show_col_types = FALSE
+)
+stop_tbl <- readr::read_csv(
+  file.path(output_dir, "cat_stop_reason_summary.csv"),
+  show_col_types = FALSE
+)
+exposure_tbl <- readr::read_csv(
+  file.path(output_dir, "cat_item_exposure.csv"),
+  show_col_types = FALSE
+)
+
+for (tbl_name in c("summary_tbl", "person_tbl")) {
+  tbl <- get(tbl_name)
+  for (col_name in c("pser_hypo", "pser_hyper")) {
+    if (!col_name %in% names(tbl)) tbl[[col_name]] <- NA_real_
+  }
+  if (!"target_hit_prop" %in% names(tbl)) tbl[["target_hit_prop"]] <- 0.50
+  assign(tbl_name, tbl)
+}
+for (col_name in c(
+  "mean_morris_hyper_continues",
+  "prop_morris_hypo_stop",
+  "prop_morris_precision_stop"
+)) {
+  if (!col_name %in% names(summary_tbl)) summary_tbl[[col_name]] <- NA_real_
+}
+
+rule_label <- function(x) {
+  dplyr::case_when(
+    x == "max_items" ~ "Fixed length",
+    x == "blueprint_pser" ~ "CAT: PSER",
+    x == "morris_pser" ~ "CAT: Morris PSER",
+    x == "se" ~ "CAT: SE",
+    TRUE ~ x
+  )
+}
+
+condition_label <- function(condition_id, stop_rule, max_items, min_items,
+                            target_se, stop_pser, randomesque,
+                            pser_hypo = NA_real_, pser_hyper = NA_real_,
+                            target_hit_prop = 0.50) {
+  hyper_text <- ifelse(
+    is.infinite(pser_hyper),
+    "Inf",
+    format(round(pser_hyper, 3), nsmall = 3)
+  )
+  hit_prop_text <- ifelse(
+    is.na(target_hit_prop) | abs(target_hit_prop - 0.50) < 1e-9,
+    "",
+    sprintf(" H%.0f", 100 * target_hit_prop)
+  )
+  dplyr::case_when(
+    grepl("^fixed_", condition_id) ~ paste0("Fixed ", max_items),
+    grepl("^current_js_default", condition_id) ~ "Current JS default",
+    stop_rule == "blueprint_pser" ~ sprintf(
+      "PSER min%s max%s p=%.3f r%s",
+      min_items, max_items, stop_pser, randomesque
+    ),
+    stop_rule == "morris_pser" ~ sprintf(
+      "Morris min%s max%s t=%.2f h-=%.3f h+=%s r%s%s",
+      min_items, max_items, target_se, pser_hypo, hyper_text, randomesque,
+      hit_prop_text
+    ),
+    stop_rule == "se" ~ sprintf(
+      "SE min%s max%s t=%.2f",
+      min_items, max_items, target_se
+    ),
+    TRUE ~ condition_id
+  )
+}
+
+fmt_num <- function(x, digits = 2) {
+  ifelse(is.na(x), "", format(round(x, digits), nsmall = digits))
+}
+
+fmt_pct_signed <- function(x, accuracy = 0.1) {
+  ifelse(
+    is.na(x),
+    "",
+    paste0(ifelse(x > 0, "+", ""), percent(x, accuracy = accuracy))
+  )
+}
+
+fmt_signed <- function(x, digits = 2) {
+  ifelse(
+    is.na(x),
+    "",
+    paste0(ifelse(x > 0, "+", ""), format(round(x, digits), nsmall = digits))
+  )
+}
+
+status_label <- function(ok, ok_text = "OK", ng_text = "要確認") {
+  ifelse(ok, ok_text, ng_text)
+}
+
+mean_ci <- function(x, level = 0.95) {
+  x <- x[is.finite(x)]
+  n <- length(x)
+  if (n < 2) {
+    return(c(mean = mean(x), se = NA_real_, low = NA_real_, high = NA_real_))
+  }
+  se <- stats::sd(x) / sqrt(n)
+  z <- stats::qnorm(1 - (1 - level) / 2)
+  c(mean = mean(x), se = se, low = mean(x) - z * se, high = mean(x) + z * se)
+}
+
+rmse_ci <- function(error, level = 0.95) {
+  error <- error[is.finite(error)]
+  n <- length(error)
+  rmse <- sqrt(mean(error^2))
+  if (n < 2 || !is.finite(rmse) || rmse == 0) {
+    return(c(rmse = rmse, se = NA_real_, low = NA_real_, high = NA_real_))
+  }
+  mse_se <- stats::sd(error^2) / sqrt(n)
+  rmse_se <- mse_se / (2 * rmse)
+  z <- stats::qnorm(1 - (1 - level) / 2)
+  c(rmse = rmse, se = rmse_se,
+    low = max(0, rmse - z * rmse_se),
+    high = rmse + z * rmse_se)
+}
+
+paired_rmse_delta_ci <- function(error_a, error_b, reps = 300,
+                                 level = 0.95) {
+  keep <- is.finite(error_a) & is.finite(error_b)
+  error_a <- error_a[keep]
+  error_b <- error_b[keep]
+  n <- length(error_a)
+  observed <- sqrt(mean(error_a^2)) - sqrt(mean(error_b^2))
+  if (n < 2 || !is.finite(observed)) {
+    return(c(delta = observed, low = NA_real_, high = NA_real_))
+  }
+  boot <- replicate(reps, {
+    idx <- sample.int(n, n, replace = TRUE)
+    sqrt(mean(error_a[idx]^2)) - sqrt(mean(error_b[idx]^2))
+  })
+  alpha <- (1 - level) / 2
+  c(
+    delta = observed,
+    low = as.numeric(quantile(boot, alpha, na.rm = TRUE)),
+    high = as.numeric(quantile(boot, 1 - alpha, na.rm = TRUE))
+  )
+}
+
+summary_tbl <- summary_tbl |>
+  mutate(
+    rule = rule_label(stop_rule),
+    condition_label = condition_label(
+      condition_id, stop_rule, max_items, min_items,
+      target_se, stop_pser, randomesque, pser_hypo, pser_hyper,
+      target_hit_prop
+    )
+  )
+
+person_tbl <- person_tbl |>
+  mutate(
+    rule = rule_label(stop_rule),
+    condition_label = condition_label(
+      condition_id, stop_rule, max_items, min_items,
+      target_se, stop_pser, randomesque, pser_hypo, pser_hyper,
+      target_hit_prop
+    )
+  )
+
+theta_tbl <- theta_tbl |>
+  left_join(
+    summary_tbl |>
+      select(condition_id, rule, condition_label, stop_rule,
+             max_item_exposure_rate),
+    by = "condition_id"
+  )
+
+n_sim <- unique(summary_tbl$n_sim)
+if (length(n_sim) != 1) {
+  n_sim_text <- paste(sort(n_sim), collapse = ", ")
+} else {
+  n_sim_text <- as.character(n_sim)
+}
+
+is_dominated <- function(i, x, y) {
+  any((x <= x[i] & y <= y[i]) & (x < x[i] | y < y[i]), na.rm = TRUE)
+}
+
+frontier_tbl <- summary_tbl |>
+  mutate(
+    dominated = vapply(
+      seq_len(n()),
+      is_dominated,
+      logical(1),
+      x = mean_items,
+      y = rmse_toeic_proxy
+    )
+  ) |>
+  filter(!dominated) |>
+  arrange(mean_items)
+
+fixed_tbl <- summary_tbl |>
+  filter(stop_rule == "max_items") |>
+  arrange(max_items)
+
+fixed_40 <- fixed_tbl |> filter(max_items == 40) |> slice(1)
+fixed_50 <- fixed_tbl |> filter(max_items == 50) |> slice(1)
+
+candidate_tbl <- summary_tbl |>
+  mutate(
+    items_saved_vs_fixed50 = fixed_50$mean_items - mean_items,
+    rmse_ratio_vs_fixed50 = rmse_toeic_proxy / fixed_50$rmse_toeic_proxy,
+    rmse_delta_vs_fixed40 = rmse_toeic_proxy - fixed_40$rmse_toeic_proxy,
+    pragmatic_score = rank(mean_items, ties.method = "average") +
+      rank(rmse_toeic_proxy, ties.method = "average") +
+      0.5 * rank(max_item_exposure_rate, ties.method = "average")
+  ) |>
+  arrange(pragmatic_score, mean_items)
+
+write_csv(frontier_tbl, file.path(output_dir, "cat_efficiency_frontier_conditions.csv"))
+write_csv(candidate_tbl, file.path(output_dir, "cat_candidate_ranking.csv"))
+
+selected_ids <- unique(c(
+  "fixed_30", "fixed_40", "fixed_50", "fixed_60",
+  "current_js_default_min0_max160_p0.01",
+  frontier_tbl$condition_id,
+  candidate_tbl$condition_id[seq_len(min(6, nrow(candidate_tbl)))]
+))
+selected_ids <- selected_ids[selected_ids %in% summary_tbl$condition_id]
+
+plot_theme <- theme_bw(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    plot.title.position = "plot"
+  )
+```
+
+```{=html}
+<style>
+.figure img, .quarto-figure img, main img {
+  cursor: zoom-in;
+}
+.ljt-lightbox {
+  align-items: center;
+  background: rgba(17, 24, 39, 0.92);
+  bottom: 0;
+  display: none;
+  justify-content: center;
+  left: 0;
+  padding: 24px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 9999;
+}
+.ljt-lightbox.is-open {
+  display: flex;
+}
+.ljt-lightbox img {
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  cursor: zoom-out;
+  max-height: 94vh;
+  max-width: 94vw;
+  object-fit: contain;
+}
+.ljt-lightbox__hint {
+  bottom: 14px;
+  color: #f9fafb;
+  font-size: 13px;
+  left: 0;
+  position: fixed;
+  right: 0;
+  text-align: center;
+}
+</style>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const overlay = document.createElement("div");
+  overlay.className = "ljt-lightbox";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+
+  const expanded = document.createElement("img");
+  const hint = document.createElement("div");
+  hint.className = "ljt-lightbox__hint";
+  hint.textContent = "Click or press Esc to close";
+  overlay.appendChild(expanded);
+  overlay.appendChild(hint);
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    overlay.classList.remove("is-open");
+    expanded.removeAttribute("src");
+    expanded.removeAttribute("alt");
+  };
+
+  document.querySelectorAll("main img").forEach((img) => {
+    if (img.closest("a")) return;
+    img.addEventListener("click", () => {
+      expanded.src = img.currentSrc || img.src;
+      expanded.alt = img.alt || "";
+      overlay.classList.add("is-open");
+    });
+  });
+
+  overlay.addEventListener("click", close);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") close();
+  });
+});
+</script>
+```
+
+## 概要
+
+このレポートは `Simulation/simulate_ljt_cat_stopping.R` の出力を読み込み、固定長版とCAT版の停止規則を比較します。今回のシミュレーション人数は `r n_sim_text` 名です。
+
+評価軸は以下の4点です。
+
+- **受検負担**: 平均提示項目数、90/95パーセンタイル項目数
+- **測定精度**: Hit/CR合成thetaおよびTOEIC proxyのRMSE、posterior joint SE
+- **条件間バランス**: Hit/CRの提示割合
+- **運用リスク**: 最大項目露出率、95パーセンタイル項目露出率
+
+```{r}
+#| label: sim-size-note
+#| results: asis
+if (suppressWarnings(as.numeric(n_sim_text[1])) < 300) {
+  cat("::: {.callout-warning}\n")
+  cat("このHTMLは少人数のスモークテスト結果でレンダリングされています。")
+  cat("意思決定用には `LJT_CAT_SIM_N=2000` 以上で再実行してください。\n")
+  cat(":::\n")
+}
+```
+
+## 主要な読み方
+
+散布図では、**左下にある条件ほど少ない項目数でRMSEが低い**ことを意味します。固定長40項目・50項目を基準線として入れているため、CAT版がどの程度の項目数で固定長版に近い精度を達成しているかを確認できます。
+
+```{r}
+#| label: efficiency-frontier
+#| fig-width: 10
+#| fig-height: 6
+label_ids <- unique(c(
+  fixed_tbl$condition_id,
+  "current_js_default_min0_max160_p0.01",
+  frontier_tbl$condition_id
+))
+
+ggplot(summary_tbl, aes(mean_items, rmse_toeic_proxy, color = rule)) +
+  geom_vline(
+    data = fixed_tbl |> filter(max_items %in% c(40, 50)),
+    aes(xintercept = mean_items),
+    linetype = "dashed",
+    color = "grey45",
+    linewidth = 0.4,
+    inherit.aes = FALSE
+  ) +
+  geom_hline(
+    data = fixed_tbl |> filter(max_items %in% c(40, 50)),
+    aes(yintercept = rmse_toeic_proxy),
+    linetype = "dashed",
+    color = "grey70",
+    linewidth = 0.4,
+    inherit.aes = FALSE
+  ) +
+  geom_point(aes(shape = factor(randomesque)), size = 2.7, alpha = 0.82) +
+  geom_path(
+    data = frontier_tbl,
+    aes(mean_items, rmse_toeic_proxy),
+    color = "black",
+    linewidth = 0.5,
+    alpha = 0.55,
+    inherit.aes = FALSE
+  ) +
+  geom_text(
+    data = summary_tbl |> filter(condition_id %in% label_ids),
+    aes(label = condition_label),
+    size = 3,
+    vjust = -0.75,
+    check_overlap = TRUE,
+    show.legend = FALSE
+  ) +
+  scale_color_brewer(palette = "Dark2") +
+  labs(
+    title = "Efficiency frontier: item burden vs TOEIC-proxy RMSE",
+    subtitle = "Lower-left is better. Dashed lines mark Fixed 40 and Fixed 50.",
+    x = "Mean administered items",
+    y = "RMSE of TOEIC-proxy score",
+    color = "Rule",
+    shape = "Randomesque K"
+  ) +
+  plot_theme
+```
+
+## 固定長30/40/50/60/80の基準
+
+固定長条件は、CATの利得を評価するための基準です。ここでは項目数を増やしたときにRMSEとSEがどの程度下がるかを確認します。
+
+```{r}
+#| label: fixed-benchmark-plot
+#| fig-width: 9
+#| fig-height: 5
+fixed_long <- fixed_tbl |>
+  select(condition_label, max_items, rmse_toeic_proxy, rmse_composite,
+         mean_joint_se) |>
+  pivot_longer(
+    cols = c(rmse_toeic_proxy, rmse_composite, mean_joint_se),
+    names_to = "metric",
+    values_to = "value"
+  ) |>
+  mutate(
+    metric = recode(
+      metric,
+      rmse_toeic_proxy = "TOEIC-proxy RMSE",
+      rmse_composite = "Composite theta RMSE",
+      mean_joint_se = "Mean joint SE"
+    )
+  )
+
+ggplot(fixed_long, aes(max_items, value)) +
+  geom_line(color = "#2b6cb0", linewidth = 0.8) +
+  geom_point(color = "#2b6cb0", size = 2.5) +
+  facet_wrap(~ metric, scales = "free_y") +
+  scale_x_continuous(breaks = fixed_tbl$max_items) +
+  labs(
+    title = "Fixed-length benchmark",
+    x = "Fixed administered items",
+    y = NULL
+  ) +
+  plot_theme +
+  theme(legend.position = "none")
+```
+
+```{r}
+#| label: fixed-table
+fixed_tbl |>
+  transmute(
+    条件 = condition_label,
+    平均項目数 = fmt_num(mean_items, 1),
+    `TOEIC proxy RMSE` = fmt_num(rmse_toeic_proxy, 2),
+    `Composite RMSE` = fmt_num(rmse_composite, 3),
+    `Joint SE` = fmt_num(mean_joint_se, 3),
+    `最大露出率` = percent(max_item_exposure_rate, accuracy = 0.1),
+    `95%露出率` = percent(p95_item_exposure_rate, accuracy = 0.1)
+  ) |>
+  kable(align = "lrrrrrr") |>
+  kable_styling(full_width = FALSE)
+```
+
+## 40項目と50項目の差
+
+```{r}
+#| label: forty-vs-fifty
+#| results: asis
+delta_items <- fixed_50$mean_items - fixed_40$mean_items
+delta_rmse_toeic <- fixed_40$rmse_toeic_proxy - fixed_50$rmse_toeic_proxy
+delta_joint_se <- fixed_40$mean_joint_se - fixed_50$mean_joint_se
+delta_composite <- fixed_40$rmse_composite - fixed_50$rmse_composite
+
+cat(sprintf(
+  "固定長50項目は固定長40項目より平均 %.0f 項目多く、TOEIC proxy RMSEを %.2f、Composite theta RMSEを %.3f、Joint SEを %.3f 下げています。\n\n",
+  delta_items, delta_rmse_toeic, delta_composite, delta_joint_se
+))
+cat("この差が小さい場合は固定40項目がコスパ優位、差が大きい場合は固定50項目またはCAT停止規則を検討する価値があります。")
+```
+
+## CAT候補の上位条件
+
+下表は、平均項目数、TOEIC proxy RMSE、最大項目露出率をまとめて小さくする簡易スコアで並べた候補です。最終判断では、RMSEだけでなく、95パーセンタイル項目数と露出率も同時に確認します。
+
+```{r}
+#| label: candidate-table
+candidate_tbl |>
+  slice_head(n = 15) |>
+  transmute(
+    条件 = condition_label,
+    規則 = rule,
+    `目標Hit%` = percent(target_hit_prop, accuracy = 1),
+    `実測Hit%` = percent(mean_hit_share, accuracy = 0.1),
+    平均項目数 = fmt_num(mean_items, 1),
+    `P90項目数` = fmt_num(p90_items, 1),
+    `P95項目数` = fmt_num(p95_items, 1),
+    `TOEIC proxy RMSE` = fmt_num(rmse_toeic_proxy, 2),
+    `Fixed50比RMSE` = fmt_num(rmse_ratio_vs_fixed50, 3),
+    `Fixed50比削減項目` = fmt_num(items_saved_vs_fixed50, 1),
+    `Joint SE` = fmt_num(mean_joint_se, 3),
+    `最大露出率` = percent(max_item_exposure_rate, accuracy = 0.1),
+    `95%露出率` = percent(p95_item_exposure_rate, accuracy = 0.1)
+  ) |>
+  kable(align = "llrrrrrrrrrrr") |>
+  kable_styling(full_width = TRUE, font_size = 12)
+```
+
+## 項目数分布
+
+平均項目数だけでは、特定の受検者に長くなりすぎる条件を見落とす可能性があります。箱ひげ図では、固定長条件と主要なCAT候補について、実際に提示された項目数のばらつきを確認します。
+
+```{r}
+#| label: length-distribution
+#| fig-width: 10
+#| fig-height: 7
+person_tbl |>
+  filter(condition_id %in% selected_ids) |>
+  mutate(condition_label = reorder(condition_label, n_items, median)) |>
+  ggplot(aes(condition_label, n_items, fill = rule)) +
+  geom_boxplot(outlier.alpha = 0.18, linewidth = 0.35) +
+  coord_flip() +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(
+    title = "Distribution of administered items",
+    x = NULL,
+    y = "Administered items",
+    fill = "Rule"
+  ) +
+  plot_theme
+```
+
+## 測定精度とSE
+
+Joint SEはCATが内部的に使う精度指標で、RMSEは真値に対する復元の良さを表します。SEだけが小さくても、RMSEや露出率が悪化している条件は慎重に扱う必要があります。
+
+```{r}
+#| label: precision-plot
+#| fig-width: 10
+#| fig-height: 6
+summary_tbl |>
+  ggplot(aes(mean_items, mean_joint_se, color = rule)) +
+  geom_point(aes(size = rmse_toeic_proxy, shape = factor(randomesque)),
+             alpha = 0.82) +
+  geom_text(
+    data = summary_tbl |> filter(condition_id %in% label_ids),
+    aes(label = condition_label),
+    size = 3,
+    vjust = -0.75,
+    check_overlap = TRUE,
+    show.legend = FALSE
+  ) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_size_continuous(range = c(2, 6)) +
+  labs(
+    title = "Internal precision: item burden vs joint SE",
+    subtitle = "Point size represents TOEIC-proxy RMSE.",
+    x = "Mean administered items",
+    y = "Mean joint SE",
+    color = "Rule",
+    shape = "Randomesque K",
+    size = "TOEIC RMSE"
+  ) +
+  plot_theme
+```
+
+## theta層別の安定性
+
+CAT停止規則は、平均では良く見えても、thetaの低い層・高い層で精度が落ちる場合があります。ここでは、主要候補についてtheta五分位ごとのRMSEと平均項目数を確認します。
+
+```{r}
+#| label: theta-bin-plot
+#| fig-width: 10
+#| fig-height: 6
+theta_plot_tbl <- theta_tbl |>
+  filter(condition_id %in% selected_ids) |>
+  select(condition_label, theta_bin, rmse_toeic_proxy, mean_items) |>
+  pivot_longer(
+    cols = c(rmse_toeic_proxy, mean_items),
+    names_to = "metric",
+    values_to = "value"
+  ) |>
+  mutate(
+    metric = recode(
+      metric,
+      rmse_toeic_proxy = "TOEIC-proxy RMSE",
+      mean_items = "Mean administered items"
+    )
+  )
+
+ggplot(theta_plot_tbl, aes(theta_bin, value, group = condition_label,
+                           color = condition_label)) +
+  geom_line(alpha = 0.75, linewidth = 0.65) +
+  geom_point(size = 1.8, alpha = 0.85) +
+  facet_wrap(~ metric, scales = "free_y", ncol = 1) +
+  labs(
+    title = "Stability across theta quintiles",
+    x = "Composite theta quintile",
+    y = NULL,
+    color = "Condition"
+  ) +
+  plot_theme +
+  theme(legend.position = "right")
+```
+
+## 停止理由
+
+PSER条件で `max_items` 停止が多い場合は、PSER閾値が厳しすぎるか、最大項目数が低すぎる可能性があります。逆に、極端に早くPSER停止する条件では、低theta・高theta層の精度を必ず確認します。
+
+```{r}
+#| label: stop-reasons
+#| fig-width: 10
+#| fig-height: 6
+stop_tbl |>
+  filter(condition_id %in% selected_ids) |>
+  left_join(summary_tbl |> select(condition_id, condition_label, rule),
+            by = "condition_id") |>
+  mutate(condition_label = reorder(condition_label, prop, sum)) |>
+  ggplot(aes(condition_label, prop, fill = stop_reason)) +
+  geom_col(width = 0.75) +
+  coord_flip() +
+  scale_y_continuous(labels = percent_format()) +
+  labs(
+    title = "Stop reasons by condition",
+    x = NULL,
+    y = "Proportion",
+    fill = "Stop reason"
+  ) +
+  plot_theme
+```
+
+## 項目露出
+
+CAT版では高情報量項目に提示が集中しやすいため、測定精度と同時に露出率を確認します。`randomesque = 3` の条件は、精度を大きく落とさずに露出を下げられるかが焦点です。
+
+```{r}
+#| label: exposure-plot
+#| fig-width: 10
+#| fig-height: 6
+summary_tbl |>
+  ggplot(aes(rmse_toeic_proxy, max_item_exposure_rate, color = rule)) +
+  geom_point(aes(size = mean_items, shape = factor(randomesque)),
+             alpha = 0.82) +
+  geom_text(
+    data = summary_tbl |> filter(condition_id %in% label_ids),
+    aes(label = condition_label),
+    size = 3,
+    vjust = -0.75,
+    check_overlap = TRUE,
+    show.legend = FALSE
+  ) +
+  scale_y_continuous(labels = percent_format()) +
+  scale_color_brewer(palette = "Dark2") +
+  labs(
+    title = "Accuracy vs item exposure",
+    subtitle = "Lower-left is operationally preferable.",
+    x = "TOEIC-proxy RMSE",
+    y = "Maximum item exposure rate",
+    color = "Rule",
+    shape = "Randomesque K",
+    size = "Mean items"
+  ) +
+  plot_theme
+```
+
+## 推奨候補の絞り込み
+
+以下は、固定50項目以内の平均項目数で、固定50項目のRMSEから5%以内に入る条件です。該当条件が少ない場合は、許容RMSE差を広げるか、最大項目数を上げる必要があります。
+
+```{r}
+#| label: shortlist
+shortlist_tbl <- summary_tbl |>
+  mutate(
+    items_saved_vs_fixed50 = fixed_50$mean_items - mean_items,
+    rmse_ratio_vs_fixed50 = rmse_toeic_proxy / fixed_50$rmse_toeic_proxy
+  ) |>
+  filter(mean_items <= fixed_50$mean_items,
+         rmse_toeic_proxy <= fixed_50$rmse_toeic_proxy * 1.05) |>
+  arrange(mean_items, rmse_toeic_proxy)
+
+if (nrow(shortlist_tbl) == 0) {
+  tibble(
+    note = "該当条件なし。固定50項目相当の精度を50項目未満で得るには、候補条件の追加または停止規則の再調整が必要です。"
+  ) |>
+    kable(col.names = "結果") |>
+    kable_styling(full_width = FALSE)
+} else {
+  shortlist_tbl |>
+    transmute(
+      条件 = condition_label,
+      規則 = rule,
+      平均項目数 = fmt_num(mean_items, 1),
+      `Fixed50比削減項目` = fmt_num(items_saved_vs_fixed50, 1),
+      `Fixed50比RMSE` = fmt_num(rmse_ratio_vs_fixed50, 3),
+      `TOEIC proxy RMSE` = fmt_num(rmse_toeic_proxy, 2),
+      `Joint SE` = fmt_num(mean_joint_se, 3),
+      `最大露出率` = percent(max_item_exposure_rate, accuracy = 0.1),
+      `95%露出率` = percent(p95_item_exposure_rate, accuracy = 0.1)
+    ) |>
+    kable(align = "llrrrrrrr") |>
+    kable_styling(full_width = TRUE, font_size = 12)
+}
+```
+
+## 実装チェック
+
+ここでは、停止規則を採用する前に確認すべき項目を自動集計します。判定閾値は保守的な初期値なので、最終的な運用基準に合わせて調整できます。
+
+### シミュレーションサイズとMonte Carlo誤差
+
+`LJT_CAT_SIM_N=2000` 以上で再実行されているか、また主要条件のRMSE推定がどの程度ぶれているかを確認します。
+
+```{r}
+#| label: mc-stability
+stability_ids <- unique(c(
+  "fixed_40", "fixed_50",
+  "current_js_default_min0_max160_p0.01",
+  frontier_tbl$condition_id,
+  candidate_tbl$condition_id[seq_len(min(8, nrow(candidate_tbl)))]
+))
+stability_ids <- stability_ids[stability_ids %in% person_tbl$condition_id]
+
+mc_tbl <- person_tbl |>
+  filter(condition_id %in% stability_ids) |>
+  group_by(condition_id, condition_label, rule) |>
+  summarise(
+    n = n(),
+    item_mean = mean_ci(n_items)["mean"],
+    item_se = mean_ci(n_items)["se"],
+    rmse = rmse_ci(toeic_proxy_hat - toeic_proxy_true)["rmse"],
+    rmse_se = rmse_ci(toeic_proxy_hat - toeic_proxy_true)["se"],
+    rmse_low = rmse_ci(toeic_proxy_hat - toeic_proxy_true)["low"],
+    rmse_high = rmse_ci(toeic_proxy_hat - toeic_proxy_true)["high"],
+    .groups = "drop"
+  ) |>
+  mutate(
+    sample_size_status = status_label(n >= 2000, "OK", "Nを増やす"),
+    rmse_stability_status = status_label(rmse_se <= 0.10, "OK", "要確認")
+  ) |>
+  arrange(rmse, item_mean)
+
+mc_tbl |>
+  transmute(
+    条件 = condition_label,
+    規則 = rule,
+    N = n,
+    `N判定` = sample_size_status,
+    平均項目数 = fmt_num(item_mean, 1),
+    `項目数SE` = fmt_num(item_se, 2),
+    `RMSE` = fmt_num(rmse, 2),
+    `RMSE 95% CI` = paste0(fmt_num(rmse_low, 2), " - ", fmt_num(rmse_high, 2)),
+    `RMSE判定` = rmse_stability_status
+  ) |>
+  kable(align = "llrlrrrrl") |>
+  kable_styling(full_width = TRUE, font_size = 12)
+```
+
+### Morris型PSERのhyper/hypo挙動
+
+Morris型条件では、`hypo` がSE基準到達前の早期停止、`hyper` がSE基準到達後の継続を制御します。`hypo` 停止が多すぎる条件は短い一方で精度損失が大きくなりやすく、`hyper` 継続が多い条件は精度を取りに行く分だけ項目数が増えます。
+
+```{r}
+#| label: morris-pser-table
+morris_tbl <- summary_tbl |>
+  filter(stop_rule == "morris_pser") |>
+  mutate(
+    rmse_ratio_vs_fixed40 = rmse_toeic_proxy / fixed_40$rmse_toeic_proxy,
+    rmse_ratio_vs_fixed50 = rmse_toeic_proxy / fixed_50$rmse_toeic_proxy,
+    items_saved_vs_fixed50 = fixed_50$mean_items - mean_items
+  ) |>
+  arrange(rmse_toeic_proxy, mean_items)
+
+write_csv(morris_tbl, file.path(output_dir, "cat_morris_pser_candidates.csv"))
+
+morris_tbl |>
+  slice_head(n = 20) |>
+  transmute(
+    条件 = condition_label,
+    `目標Hit%` = percent(target_hit_prop, accuracy = 1),
+    `実測Hit%` = percent(mean_hit_share, accuracy = 0.1),
+    平均項目数 = fmt_num(mean_items, 1),
+    `P95項目数` = fmt_num(p95_items, 1),
+    `TOEIC proxy RMSE` = fmt_num(rmse_toeic_proxy, 2),
+    `固定40比RMSE` = fmt_num(rmse_ratio_vs_fixed40, 3),
+    `固定50比削減項目` = fmt_num(items_saved_vs_fixed50, 1),
+    `Joint SE` = fmt_num(mean_joint_se, 3),
+    `hyper継続/人` = fmt_num(mean_morris_hyper_continues, 2),
+    `hypo停止` = percent(prop_morris_hypo_stop, accuracy = 0.1),
+    `SE停止` = percent(prop_morris_precision_stop, accuracy = 0.1),
+    `最大露出率` = percent(max_item_exposure_rate, accuracy = 0.1)
+  ) |>
+  kable(align = "lrrrrrrrrrrrr") |>
+  kable_styling(full_width = TRUE, font_size = 11)
+```
+
+### Hit/CR比率探索
+
+Hit/CR比率を固定1:1にするか、CR多めまたはHit多めにするかは、CATの内容妥当性と予測効率の両方に関わります。比率探索プロファイルでは、同じMorris型停止規則の近傍で目標Hit比率を30%から70%まで動かし、TOEIC proxy RMSE、項目数、Joint SE、露出率を比較します。
+
+```{r}
+#| label: hit-cr-ratio-overview
+has_hit_ratio_variation <- n_distinct(morris_tbl$target_hit_prop) > 1
+
+if (!has_hit_ratio_variation) {
+  knitr::asis_output(
+    "*この出力はHit/CR比率を固定した通常プロファイルです。比率探索には `LJT_CAT_SIM_PROFILE=ratio` を使用してください。*"
+  )
+} else {
+  ratio_best_by_target <- morris_tbl |>
+    group_by(target_hit_prop) |>
+    slice_min(rmse_toeic_proxy, n = 1, with_ties = FALSE) |>
+    ungroup()
+
+  ratio_block_winners <- morris_tbl |>
+    group_by(min_items, max_items, target_se, pser_hypo, pser_hyper,
+             randomesque) |>
+    slice_min(rmse_toeic_proxy, n = 1, with_ties = FALSE) |>
+    ungroup()
+
+  ratio_win_counts <- ratio_block_winners |>
+    count(target_hit_prop, name = "n_block_wins")
+
+  ratio_overview <- ratio_best_by_target |>
+    left_join(ratio_win_counts, by = "target_hit_prop") |>
+    mutate(n_block_wins = coalesce(n_block_wins, 0L)) |>
+    arrange(target_hit_prop)
+
+  write_csv(ratio_overview,
+            file.path(output_dir, "cat_hit_cr_ratio_overview.csv"))
+  write_csv(ratio_block_winners,
+            file.path(output_dir, "cat_hit_cr_ratio_block_winners.csv"))
+
+  ratio_overview |>
+    transmute(
+      `目標Hit%` = percent(target_hit_prop, accuracy = 1),
+      `実測Hit%` = percent(mean_hit_share, accuracy = 0.1),
+      `最良RMSE` = fmt_num(rmse_toeic_proxy, 2),
+      `固定40比RMSE` = fmt_num(rmse_ratio_vs_fixed40, 3),
+      `平均項目数` = fmt_num(mean_items, 1),
+      `P95項目数` = fmt_num(p95_items, 1),
+      `Joint SE` = fmt_num(mean_joint_se, 3),
+      `最大露出率` = percent(max_item_exposure_rate, accuracy = 0.1),
+      `ブロック勝数` = n_block_wins
+    ) |>
+    kable(align = "rrrrrrrrr") |>
+    kable_styling(full_width = FALSE, font_size = 12)
+}
+```
+
+```{r}
+#| label: hit-cr-ratio-block-delta
+#| fig-width: 10
+#| fig-height: 7
+
+if (!has_hit_ratio_variation) {
+  knitr::asis_output("*比率探索プロファイルではないため、50%基準との差分比較は省略します。*")
+} else {
+  ratio_block_keys <- c(
+    "min_items", "max_items", "target_se", "pser_hypo",
+    "pser_hyper", "randomesque"
+  )
+
+  ratio_block_summary <- person_tbl |>
+    filter(stop_rule == "morris_pser") |>
+    mutate(
+      toeic_error = toeic_proxy_hat - toeic_proxy_true,
+      block_label = sprintf(
+        "min%s max%s t%.2f r%s",
+        min_items, max_items, target_se, randomesque
+      )
+    ) |>
+    group_by(across(all_of(ratio_block_keys)), block_label, target_hit_prop) |>
+    summarise(
+      n = n(),
+      actual_hit_prop = mean(hit_share, na.rm = TRUE),
+      mean_items = mean(n_items, na.rm = TRUE),
+      mean_joint_se = mean(joint_se, na.rm = TRUE),
+      rmse_toeic_proxy = sqrt(mean(toeic_error^2, na.rm = TRUE)),
+      .groups = "drop"
+    )
+
+  ratio_block_base <- ratio_block_summary |>
+    filter(abs(target_hit_prop - 0.50) < 1e-9) |>
+    select(
+      all_of(ratio_block_keys), block_label,
+      base_actual_hit_prop = actual_hit_prop,
+      base_mean_items = mean_items,
+      base_mean_joint_se = mean_joint_se,
+      base_rmse_toeic_proxy = rmse_toeic_proxy
+    )
+
+  ratio_block_delta <- ratio_block_summary |>
+    filter(abs(target_hit_prop - 0.50) >= 1e-9) |>
+    left_join(ratio_block_base, by = c(ratio_block_keys, "block_label")) |>
+    mutate(
+      delta_actual_hit_prop = actual_hit_prop - base_actual_hit_prop,
+      delta_mean_items = mean_items - base_mean_items,
+      delta_joint_se = mean_joint_se - base_mean_joint_se,
+      delta_rmse_toeic_proxy = rmse_toeic_proxy - base_rmse_toeic_proxy
+    ) |>
+    arrange(target_hit_prop, min_items, max_items, target_se, randomesque)
+
+  ratio_person_errors <- person_tbl |>
+    filter(stop_rule == "morris_pser") |>
+    mutate(toeic_error = toeic_proxy_hat - toeic_proxy_true) |>
+    select(all_of(ratio_block_keys), target_hit_prop, sim_id, toeic_error)
+
+  set.seed(20260531)
+  ratio_block_delta_ci <- lapply(seq_len(nrow(ratio_block_delta)), function(i) {
+    row_i <- ratio_block_delta[i, ]
+    paired_errors <- ratio_person_errors |>
+      filter(
+        min_items == row_i$min_items,
+        max_items == row_i$max_items,
+        abs(target_se - row_i$target_se) < 1e-9,
+        abs(pser_hypo - row_i$pser_hypo) < 1e-9,
+        randomesque == row_i$randomesque,
+        target_hit_prop %in% c(row_i$target_hit_prop, 0.50)
+      )
+    if (is.infinite(row_i$pser_hyper)) {
+      paired_errors <- paired_errors |>
+        filter(is.infinite(pser_hyper))
+    } else {
+      paired_errors <- paired_errors |>
+        filter(abs(pser_hyper - row_i$pser_hyper) < 1e-9)
+    }
+    paired_errors <- paired_errors |>
+      mutate(
+        ratio_role = ifelse(abs(target_hit_prop - 0.50) < 1e-9,
+                            "base", "comparison")
+      ) |>
+      select(sim_id, ratio_role, toeic_error) |>
+      tidyr::pivot_wider(names_from = ratio_role, values_from = toeic_error) |>
+      filter(!is.na(base), !is.na(comparison))
+
+    ci <- paired_rmse_delta_ci(paired_errors$comparison, paired_errors$base)
+    tibble(
+      min_items = row_i$min_items,
+      max_items = row_i$max_items,
+      target_se = row_i$target_se,
+      pser_hypo = row_i$pser_hypo,
+      pser_hyper = row_i$pser_hyper,
+      randomesque = row_i$randomesque,
+      target_hit_prop = row_i$target_hit_prop,
+      delta_rmse_paired = ci["delta"],
+      delta_rmse_paired_low = ci["low"],
+      delta_rmse_paired_high = ci["high"]
+    )
+  }) |>
+    bind_rows()
+
+  ratio_block_delta <- ratio_block_delta |>
+    left_join(
+      ratio_block_delta_ci,
+      by = c(ratio_block_keys, "target_hit_prop")
+    )
+
+  ratio_delta_overview <- ratio_block_delta |>
+    group_by(target_hit_prop) |>
+    summarise(
+      n_blocks = n(),
+      blocks_lower_rmse = sum(delta_rmse_toeic_proxy < 0, na.rm = TRUE),
+      blocks_paired_ci_lower = sum(delta_rmse_paired_high < 0, na.rm = TRUE),
+      blocks_paired_ci_higher = sum(delta_rmse_paired_low > 0, na.rm = TRUE),
+      mean_delta_rmse = mean_ci(delta_rmse_toeic_proxy)["mean"],
+      delta_rmse_low = mean_ci(delta_rmse_toeic_proxy)["low"],
+      delta_rmse_high = mean_ci(delta_rmse_toeic_proxy)["high"],
+      mean_delta_items = mean(delta_mean_items, na.rm = TRUE),
+      mean_delta_joint_se = mean(delta_joint_se, na.rm = TRUE),
+      mean_delta_actual_hit_prop = mean(delta_actual_hit_prop, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    arrange(target_hit_prop)
+
+  write_csv(
+    ratio_block_delta,
+    file.path(output_dir, "cat_hit_cr_ratio_block_delta_vs_50.csv")
+  )
+  write_csv(
+    ratio_delta_overview,
+    file.path(output_dir, "cat_hit_cr_ratio_delta_vs_50.csv")
+  )
+
+  ratio_delta_overview |>
+    transmute(
+      `目標Hit%` = percent(target_hit_prop, accuracy = 1),
+      `低RMSEブロック` = paste0(blocks_lower_rmse, "/", n_blocks),
+      `paired CIで悪化` = paste0(blocks_paired_ci_higher, "/", n_blocks),
+      `ΔRMSE 95% CI` = paste0(
+        fmt_signed(mean_delta_rmse, 2), " [",
+        fmt_signed(delta_rmse_low, 2), ", ",
+        fmt_signed(delta_rmse_high, 2), "]"
+      ),
+      `Δ平均項目数` = fmt_signed(mean_delta_items, 1),
+      `ΔJoint SE` = fmt_signed(mean_delta_joint_se, 3),
+      `Δ実測Hit%` = fmt_pct_signed(mean_delta_actual_hit_prop, 0.1)
+    ) |>
+    kable(align = "rllllll") |>
+    kable_styling(full_width = FALSE, font_size = 12)
+
+  p_ratio_delta <- ggplot(
+    ratio_block_delta,
+    aes(
+      x = factor(target_hit_prop, labels = percent(sort(unique(target_hit_prop)))),
+      y = reorder(block_label, delta_rmse_toeic_proxy),
+      fill = delta_rmse_toeic_proxy
+    )
+  ) +
+    geom_tile(color = "white", linewidth = 0.3) +
+    geom_text(aes(label = fmt_signed(delta_rmse_toeic_proxy, 2)), size = 2.7) +
+    scale_fill_gradient2(
+      low = "#2b6cb0",
+      mid = "white",
+      high = "#c53030",
+      midpoint = 0,
+      name = "ΔRMSE"
+    ) +
+    labs(
+      title = "Hit/CR ratio exploration: same-block ΔRMSE vs 50%",
+      subtitle = "Negative values mean lower RMSE than the 1:1 condition within the same stopping-rule block",
+      x = "Target Hit share",
+      y = "Stopping-rule block"
+    ) +
+    plot_theme +
+    theme(legend.position = "right")
+
+  ggsave(file.path(output_dir, "cat_hit_cr_ratio_block_delta_vs_50.png"),
+         p_ratio_delta, width = 10, height = 7, dpi = 220)
+
+  p_ratio_delta
+}
+```
+
+```{r}
+#| label: hit-cr-ratio-actual-hit-share
+#| fig-width: 8
+#| fig-height: 5
+
+if (!has_hit_ratio_variation) {
+  knitr::asis_output("*比率探索プロファイルではないため、実測Hit比率診断は省略します。*")
+} else {
+  ratio_actual_hit_tbl <- person_tbl |>
+    filter(stop_rule == "morris_pser") |>
+    group_by(target_hit_prop, theta_bin) |>
+    summarise(
+      n = n(),
+      actual_hit_prop_mean = mean(hit_share, na.rm = TRUE),
+      actual_hit_prop_p05 = as.numeric(quantile(hit_share, 0.05, na.rm = TRUE)),
+      actual_hit_prop_p95 = as.numeric(quantile(hit_share, 0.95, na.rm = TRUE)),
+      .groups = "drop"
+    ) |>
+    arrange(target_hit_prop, theta_bin)
+
+  write_csv(
+    ratio_actual_hit_tbl,
+    file.path(output_dir, "cat_hit_cr_ratio_actual_hit_share.csv")
+  )
+
+  p_actual_hit <- ggplot(
+    ratio_actual_hit_tbl,
+    aes(target_hit_prop, actual_hit_prop_mean, color = theta_bin)
+  ) +
+    geom_abline(intercept = 0, slope = 1, linetype = "dashed",
+                color = "grey55") +
+    geom_errorbar(
+      aes(ymin = actual_hit_prop_p05, ymax = actual_hit_prop_p95),
+      width = 0.012,
+      alpha = 0.35
+    ) +
+    geom_line(alpha = 0.65) +
+    geom_point(size = 2.2) +
+    scale_x_continuous(labels = percent, breaks = seq(0.3, 0.7, by = 0.1)) +
+    scale_y_continuous(labels = percent, breaks = seq(0.3, 0.7, by = 0.1)) +
+    scale_color_brewer(palette = "Dark2") +
+    labs(
+      title = "Hit/CR ratio exploration: achieved Hit share",
+      subtitle = "Dashed line = target equals achieved; intervals are person-level 5th-95th percentiles",
+      x = "Target Hit share",
+      y = "Achieved Hit share",
+      color = "Theta quintile"
+    ) +
+    plot_theme
+
+  ggsave(file.path(output_dir, "cat_hit_cr_ratio_actual_hit_share.png"),
+         p_actual_hit, width = 8, height = 5, dpi = 220)
+
+  p_actual_hit
+}
+```
+
+```{r}
+#| label: hit-cr-ratio-rmse-plot
+#| fig-width: 10
+#| fig-height: 6.5
+
+if (!has_hit_ratio_variation) {
+  knitr::asis_output("*比率探索プロファイルではないため、比率RMSE図は省略します。*")
+} else {
+  ratio_plot_tbl <- morris_tbl |>
+    mutate(
+      min_max = paste0("min", min_items, " / max", max_items),
+      target_se_label = paste0("target SE ", fmt_num(target_se, 2)),
+      randomesque_label = paste0("r", randomesque)
+    )
+
+  p_ratio_rmse <- ggplot(
+    ratio_plot_tbl,
+    aes(
+      x = target_hit_prop,
+      y = rmse_toeic_proxy,
+      color = target_se_label,
+      shape = randomesque_label,
+      group = interaction(target_se_label, randomesque_label, min_max)
+    )
+  ) +
+    geom_vline(xintercept = 0.50, linetype = "dashed", color = "grey55") +
+    geom_line(alpha = 0.45) +
+    geom_point(size = 2.4, alpha = 0.9) +
+    facet_wrap(~ min_max, ncol = 2) +
+    scale_x_continuous(labels = percent, breaks = seq(0.3, 0.7, by = 0.1)) +
+    labs(
+      title = "Hit/CR ratio exploration: TOEIC-proxy RMSE",
+      subtitle = "Dashed line = 1:1 Hit/CR blueprint; lower RMSE is better",
+      x = "Target Hit share",
+      y = "TOEIC-proxy RMSE",
+      color = NULL,
+      shape = NULL
+    ) +
+    plot_theme
+
+  ggsave(file.path(output_dir, "cat_hit_cr_ratio_rmse.png"),
+         p_ratio_rmse, width = 10, height = 6.5, dpi = 220)
+
+  p_ratio_rmse
+}
+```
+
+```{r}
+#| label: hit-cr-ratio-metric-panel
+#| fig-width: 10
+#| fig-height: 8
+
+if (!has_hit_ratio_variation) {
+  knitr::asis_output("*比率探索プロファイルではないため、比率指標パネルは省略します。*")
+} else {
+  ratio_metric_long <- morris_tbl |>
+    mutate(
+      min_max = paste0("min", min_items, " / max", max_items),
+      target_se_label = paste0("target SE ", fmt_num(target_se, 2)),
+      randomesque_label = paste0("r", randomesque)
+    ) |>
+    select(target_hit_prop, min_max, target_se_label, randomesque_label,
+           mean_items, mean_joint_se, rmse_toeic_proxy,
+           max_item_exposure_rate) |>
+    pivot_longer(
+      c(mean_items, mean_joint_se, rmse_toeic_proxy, max_item_exposure_rate),
+      names_to = "metric",
+      values_to = "value"
+    ) |>
+    mutate(
+      metric = recode(
+        metric,
+        mean_items = "Mean items",
+        mean_joint_se = "Joint SE",
+        rmse_toeic_proxy = "TOEIC-proxy RMSE",
+        max_item_exposure_rate = "Max exposure"
+      )
+    )
+
+  p_ratio_metrics <- ggplot(
+    ratio_metric_long,
+    aes(
+      target_hit_prop, value,
+      color = target_se_label,
+      shape = randomesque_label,
+      group = interaction(target_se_label, randomesque_label)
+    )
+  ) +
+    geom_vline(xintercept = 0.50, linetype = "dashed", color = "grey60") +
+    geom_line(alpha = 0.45) +
+    geom_point(size = 2.1, alpha = 0.9) +
+    facet_grid(metric ~ min_max, scales = "free_y") +
+    scale_x_continuous(labels = percent, breaks = seq(0.3, 0.7, by = 0.2)) +
+    labs(
+      title = "Hit/CR ratio exploration: operational metrics",
+      x = "Target Hit share",
+      y = NULL,
+      color = NULL,
+      shape = NULL
+    ) +
+    plot_theme
+
+  ggsave(file.path(output_dir, "cat_hit_cr_ratio_metric_panel.png"),
+         p_ratio_metrics, width = 10, height = 8, dpi = 220)
+
+  p_ratio_metrics
+}
+```
+
+```{r}
+#| label: hit-cr-ratio-uncertainty
+#| fig-width: 8
+#| fig-height: 4.5
+
+if (!has_hit_ratio_variation || !exists("ratio_overview")) {
+  knitr::asis_output("*比率探索プロファイルではないため、比率別RMSE信頼区間は省略します。*")
+} else {
+  ratio_best_ids <- ratio_overview$condition_id
+
+  ratio_uncertainty_tbl <- person_tbl |>
+    filter(condition_id %in% ratio_best_ids) |>
+    mutate(toeic_error = toeic_proxy_hat - toeic_proxy_true) |>
+    group_by(condition_id, condition_label, target_hit_prop) |>
+    summarise(
+      n = n(),
+      actual_hit_prop = mean(hit_share, na.rm = TRUE),
+      mean_items = mean_ci(n_items)["mean"],
+      mean_items_low = mean_ci(n_items)["low"],
+      mean_items_high = mean_ci(n_items)["high"],
+      rmse_toeic_proxy = rmse_ci(toeic_error)["rmse"],
+      rmse_low = rmse_ci(toeic_error)["low"],
+      rmse_high = rmse_ci(toeic_error)["high"],
+      bias_toeic_proxy = mean(toeic_error, na.rm = TRUE),
+      mean_joint_se = mean(joint_se, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    arrange(target_hit_prop)
+
+  write_csv(
+    ratio_uncertainty_tbl,
+    file.path(output_dir, "cat_hit_cr_ratio_uncertainty.csv")
+  )
+
+  ratio_uncertainty_tbl |>
+    transmute(
+      `目標Hit%` = percent(target_hit_prop, accuracy = 1),
+      `実測Hit%` = percent(actual_hit_prop, accuracy = 0.1),
+      N = n,
+      `平均項目数 95% CI` = paste0(
+        fmt_num(mean_items, 1), " [",
+        fmt_num(mean_items_low, 1), ", ",
+        fmt_num(mean_items_high, 1), "]"
+      ),
+      `RMSE 95% CI` = paste0(
+        fmt_num(rmse_toeic_proxy, 2), " [",
+        fmt_num(rmse_low, 2), ", ",
+        fmt_num(rmse_high, 2), "]"
+      ),
+      `バイアス` = fmt_signed(bias_toeic_proxy, 2),
+      `Joint SE` = fmt_num(mean_joint_se, 3)
+    ) |>
+    kable(align = "rrrllll") |>
+    kable_styling(full_width = FALSE, font_size = 12)
+
+  p_ratio_uncertainty <- ggplot(
+    ratio_uncertainty_tbl,
+    aes(target_hit_prop, rmse_toeic_proxy)
+  ) +
+    geom_vline(xintercept = 0.50, linetype = "dashed", color = "grey55") +
+    geom_errorbar(aes(ymin = rmse_low, ymax = rmse_high),
+                  width = 0.015, color = "grey35") +
+    geom_point(size = 2.8, color = "#2b6cb0") +
+    scale_x_continuous(labels = percent, breaks = seq(0.3, 0.7, by = 0.1)) +
+    labs(
+      title = "Hit/CR ratio exploration: RMSE uncertainty",
+      subtitle = "Approximate 95% CI from person-level simulation error; lower is better",
+      x = "Target Hit share",
+      y = "TOEIC-proxy RMSE"
+    ) +
+    plot_theme +
+    theme(legend.position = "none")
+
+  ggsave(file.path(output_dir, "cat_hit_cr_ratio_rmse_ci.png"),
+         p_ratio_uncertainty, width = 8, height = 4.5, dpi = 220)
+
+  p_ratio_uncertainty
+}
+```
+
+```{r}
+#| label: hit-cr-ratio-theta-diagnostics
+#| fig-width: 10
+#| fig-height: 7
+
+if (!has_hit_ratio_variation || !exists("ratio_overview")) {
+  knitr::asis_output("*比率探索プロファイルではないため、能力帯別の比率診断は省略します。*")
+} else {
+  ratio_theta_tbl <- person_tbl |>
+    filter(condition_id %in% ratio_best_ids) |>
+    mutate(
+      target_hit_label = percent(target_hit_prop, accuracy = 1),
+      toeic_error = toeic_proxy_hat - toeic_proxy_true,
+      hit_error = theta_hit_hat - theta_hit_true,
+      cr_error = theta_cr_hat - theta_cr_true
+    ) |>
+    group_by(target_hit_prop, target_hit_label, condition_id,
+             condition_label, theta_bin) |>
+    summarise(
+      n = n(),
+      actual_hit_prop = mean(hit_share, na.rm = TRUE),
+      mean_items = mean(n_items, na.rm = TRUE),
+      rmse_toeic_proxy = sqrt(mean(toeic_error^2, na.rm = TRUE)),
+      bias_toeic_proxy = mean(toeic_error, na.rm = TRUE),
+      rmse_hit = sqrt(mean(hit_error^2, na.rm = TRUE)),
+      rmse_cr = sqrt(mean(cr_error^2, na.rm = TRUE)),
+      bias_hit = mean(hit_error, na.rm = TRUE),
+      bias_cr = mean(cr_error, na.rm = TRUE),
+      mean_joint_se = mean(joint_se, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    arrange(target_hit_prop, theta_bin)
+
+  write_csv(
+    ratio_theta_tbl,
+    file.path(output_dir, "cat_hit_cr_ratio_theta_diagnostics.csv")
+  )
+
+  ratio_theta_long <- ratio_theta_tbl |>
+    select(target_hit_prop, target_hit_label, theta_bin,
+           rmse_toeic_proxy, bias_toeic_proxy, mean_items, mean_joint_se) |>
+    pivot_longer(
+      c(rmse_toeic_proxy, bias_toeic_proxy, mean_items, mean_joint_se),
+      names_to = "metric",
+      values_to = "value"
+    ) |>
+    mutate(
+      metric = recode(
+        metric,
+        rmse_toeic_proxy = "TOEIC-proxy RMSE",
+        bias_toeic_proxy = "TOEIC-proxy bias",
+        mean_items = "Mean items",
+        mean_joint_se = "Joint SE"
+      ),
+      metric = factor(
+        metric,
+        levels = c(
+          "TOEIC-proxy RMSE", "TOEIC-proxy bias",
+          "Joint SE", "Mean items"
+        )
+      )
+    )
+
+  p_ratio_theta <- ggplot(
+    ratio_theta_long,
+    aes(theta_bin, value, color = target_hit_label,
+        group = target_hit_label)
+  ) +
+    geom_hline(
+      data = tibble(metric = factor("TOEIC-proxy bias",
+                                    levels = levels(ratio_theta_long$metric))),
+      aes(yintercept = 0),
+      inherit.aes = FALSE,
+      linetype = "dashed",
+      color = "grey55"
+    ) +
+    geom_line(alpha = 0.72, linewidth = 0.7) +
+    geom_point(size = 2.0, alpha = 0.9) +
+    facet_wrap(~ metric, scales = "free_y", ncol = 2) +
+    scale_color_brewer(palette = "Dark2") +
+    labs(
+      title = "Hit/CR ratio exploration: theta-band diagnostics",
+      subtitle = "Best RMSE condition within each target Hit share",
+      x = "Composite theta quintile",
+      y = NULL,
+      color = "Target Hit share"
+    ) +
+    plot_theme
+
+  ggsave(file.path(output_dir, "cat_hit_cr_ratio_theta_diagnostics.png"),
+         p_ratio_theta, width = 10, height = 7, dpi = 220)
+
+  p_ratio_theta
+}
+```
+
+```{r}
+#| label: hit-cr-ratio-domain-bias
+#| fig-width: 10
+#| fig-height: 6
+
+if (!has_hit_ratio_variation || !exists("ratio_theta_tbl")) {
+  knitr::asis_output("*比率探索プロファイルではないため、Hit/CR別バイアス診断は省略します。*")
+} else {
+  ratio_domain_long <- ratio_theta_tbl |>
+    select(target_hit_prop, target_hit_label, theta_bin,
+           bias_hit, bias_cr, rmse_hit, rmse_cr) |>
+    pivot_longer(
+      c(bias_hit, bias_cr, rmse_hit, rmse_cr),
+      names_to = "metric",
+      values_to = "value"
+    ) |>
+    mutate(
+      metric = recode(
+        metric,
+        bias_hit = "Hit theta bias",
+        bias_cr = "CR theta bias",
+        rmse_hit = "Hit theta RMSE",
+        rmse_cr = "CR theta RMSE"
+      ),
+      metric = factor(
+        metric,
+        levels = c(
+          "Hit theta bias", "CR theta bias",
+          "Hit theta RMSE", "CR theta RMSE"
+        )
+      )
+    )
+
+  p_domain_bias <- ggplot(
+    ratio_domain_long,
+    aes(theta_bin, value, color = target_hit_label,
+        group = target_hit_label)
+  ) +
+    geom_hline(
+      data = tibble(
+        metric = factor(c("Hit theta bias", "CR theta bias"),
+                        levels = levels(ratio_domain_long$metric))
+      ),
+      aes(yintercept = 0),
+      inherit.aes = FALSE,
+      linetype = "dashed",
+      color = "grey55"
+    ) +
+    geom_line(alpha = 0.72, linewidth = 0.7) +
+    geom_point(size = 2.0, alpha = 0.9) +
+    facet_wrap(~ metric, scales = "free_y", ncol = 2) +
+    scale_color_brewer(palette = "Dark2") +
+    labs(
+      title = "Hit/CR ratio exploration: domain-specific bias and RMSE",
+      subtitle = "Best RMSE condition within each target Hit share",
+      x = "Composite theta quintile",
+      y = NULL,
+      color = "Target Hit share"
+    ) +
+    plot_theme
+
+  ggsave(file.path(output_dir, "cat_hit_cr_ratio_hit_cr_bias.png"),
+         p_domain_bias, width = 10, height = 6, dpi = 220)
+
+  p_domain_bias
+}
+```
+
+```{r}
+#| label: hit-cr-ratio-interpretation
+#| results: asis
+
+if (!has_hit_ratio_variation || !exists("ratio_overview")) {
+  cat("")
+} else {
+  ratio_best <- ratio_overview |>
+    slice_min(rmse_toeic_proxy, n = 1, with_ties = FALSE)
+  ratio_wins_total <- if (exists("ratio_block_winners")) {
+    nrow(ratio_block_winners)
+  } else {
+    NA_integer_
+  }
+  ratio_wins_50 <- if (exists("ratio_win_counts")) {
+    ratio_win_counts |>
+      filter(abs(target_hit_prop - 0.50) < 1e-9) |>
+      pull(n_block_wins)
+  } else {
+    integer()
+  }
+  if (length(ratio_wins_50) == 0) ratio_wins_50 <- 0L
+
+  ci_overlap_text <- ""
+  if (exists("ratio_uncertainty_tbl")) {
+    best_ci <- ratio_uncertainty_tbl |>
+      filter(condition_id == ratio_best$condition_id[1]) |>
+      slice(1)
+    overlapping_targets <- ratio_uncertainty_tbl |>
+      filter(
+        abs(target_hit_prop - best_ci$target_hit_prop) > 1e-9,
+        rmse_low <= best_ci$rmse_high,
+        rmse_high >= best_ci$rmse_low
+      ) |>
+      nrow()
+    ratio_n <- unique(ratio_uncertainty_tbl$n)
+    ratio_n_text <- if (length(ratio_n) == 1) as.character(ratio_n) else {
+      paste(ratio_n, collapse = ", ")
+    }
+    ci_overlap_text <- if (overlapping_targets > 0) {
+      paste0(
+        "ただし、近似95%信頼区間は複数の比率条件で重なっているため、N=",
+        ratio_n_text,
+        "の比率探索だけで微差を断定しない。"
+      )
+    } else {
+      "近似95%信頼区間でも最良比率の優位が比較的明確である。"
+    }
+  }
+
+  tail_text <- ""
+  if (exists("ratio_theta_tbl")) {
+    q5_mean <- ratio_theta_tbl |>
+      filter(theta_bin == "Q5") |>
+      summarise(
+        rmse = mean(rmse_toeic_proxy, na.rm = TRUE),
+        bias = mean(bias_toeic_proxy, na.rm = TRUE),
+        .groups = "drop"
+      )
+    tail_text <- sprintf(
+      "能力帯別にはQ5でRMSE平均 %.2f、バイアス平均 %s と端の復元が弱い。",
+      q5_mean$rmse,
+      fmt_signed(q5_mean$bias, 2)
+    )
+  }
+
+  cat("::: {.callout-note}\n")
+  cat(sprintf(
+    "比率探索の最良条件は目標Hit %.0f%%、実測Hit %.1f%%、平均 %.1f 項目、TOEIC proxy RMSE %.2f です。ブロック単位では1:1条件が %s/%s ブロックで最良でした。\n\n",
+    100 * ratio_best$target_hit_prop,
+    100 * ratio_best$mean_hit_share,
+    ratio_best$mean_items,
+    ratio_best$rmse_toeic_proxy,
+    ratio_wins_50,
+    ratio_wins_total
+  ))
+  cat(paste(ci_overlap_text, tail_text))
+  cat("\n:::\n")
+}
+```
+
+### randomesque = 3 の効果
+
+同じPSER条件で `randomesque = 1` と `randomesque = 3` を比較します。`randomesque = 3` は高情報量項目への集中を下げるための候補ですが、RMSEが大きく悪化する場合は採用しにくくなります。
+
+```{r}
+#| label: randomesque-check
+randomesque_pairs <- summary_tbl |>
+  filter(stop_rule %in% c("blueprint_pser", "morris_pser"),
+         randomesque %in% c(1, 3)) |>
+  select(stop_rule, min_items, max_items, target_se, stop_pser,
+         pser_hypo, pser_hyper, target_hit_prop, randomesque,
+         mean_items, p95_items, rmse_toeic_proxy,
+         mean_joint_se, max_item_exposure_rate, p95_item_exposure_rate) |>
+  pivot_wider(
+    names_from = randomesque,
+    names_glue = "{.value}_r{randomesque}",
+    values_from = c(mean_items, p95_items, rmse_toeic_proxy,
+                    mean_joint_se, max_item_exposure_rate,
+                    p95_item_exposure_rate)
+  ) |>
+  filter(!is.na(rmse_toeic_proxy_r1), !is.na(rmse_toeic_proxy_r3)) |>
+  mutate(
+    rmse_change_pct = rmse_toeic_proxy_r3 / rmse_toeic_proxy_r1 - 1,
+    mean_item_change = mean_items_r3 - mean_items_r1,
+    max_exposure_reduction = max_item_exposure_rate_r1 - max_item_exposure_rate_r3,
+    p95_exposure_reduction = p95_item_exposure_rate_r1 - p95_item_exposure_rate_r3,
+    operational_status = status_label(
+      rmse_change_pct <= 0.05 &
+        (max_exposure_reduction > 0 | p95_exposure_reduction > 0),
+      "候補", "要確認"
+    )
+  ) |>
+  arrange(desc(p95_exposure_reduction), rmse_change_pct)
+
+randomesque_pairs |>
+  slice_head(n = 15) |>
+  transmute(
+    規則 = rule_label(stop_rule),
+    `min/max` = paste0(min_items, "/", max_items),
+    `目標Hit%` = percent(target_hit_prop, accuracy = 1),
+    閾値 = case_when(
+      stop_rule == "blueprint_pser" ~ paste0("p=", fmt_num(stop_pser, 3)),
+      stop_rule == "morris_pser" ~ paste0(
+        "t=", fmt_num(target_se, 2),
+        ", h-=", fmt_num(pser_hypo, 3),
+        ", h+=", ifelse(is.infinite(pser_hyper), "Inf",
+                        fmt_num(pser_hyper, 3))
+      ),
+      TRUE ~ ""
+    ),
+    `平均項目差 r3-r1` = fmt_signed(mean_item_change, 1),
+    `RMSE変化` = fmt_pct_signed(rmse_change_pct, 0.1),
+    `最大露出低下` = percent(max_exposure_reduction, accuracy = 0.1),
+    `95%露出低下` = percent(p95_exposure_reduction, accuracy = 0.1),
+    判定 = operational_status
+  ) |>
+  kable(align = "llllrrrrl") |>
+  kable_styling(full_width = FALSE)
+```
+
+```{r}
+#| label: randomesque-plot
+#| fig-width: 8
+#| fig-height: 5
+ggplot(randomesque_pairs,
+       aes(p95_exposure_reduction, rmse_change_pct,
+           color = factor(min_items), shape = factor(max_items))) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "grey50") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey70") +
+  geom_point(size = 2.6, alpha = 0.85) +
+  scale_x_continuous(labels = percent_format()) +
+  scale_y_continuous(labels = percent_format()) +
+  labs(
+    title = "Randomesque trade-off",
+    subtitle = "Right side lowers exposure; below dashed line keeps RMSE increase within 5%.",
+    x = "P95 exposure reduction from r1 to r3",
+    y = "TOEIC-proxy RMSE change from r1 to r3",
+    color = "Min items",
+    shape = "Max items"
+  ) +
+  plot_theme
+```
+
+### theta端での精度劣化
+
+theta下位層・上位層でRMSEが大きく悪化しないかを確認します。ここではQ1/Q5の大きい方が中央層Q2-Q4平均の1.25倍以内であれば暫定的にOKとします。
+
+```{r}
+#| label: theta-extreme-check
+theta_extreme_tbl <- theta_tbl |>
+  filter(condition_id %in% stability_ids) |>
+  mutate(region = case_when(
+    theta_bin == "Q1" ~ "low",
+    theta_bin == "Q5" ~ "high",
+    TRUE ~ "middle"
+  )) |>
+  group_by(condition_id, condition_label, rule, region) |>
+  summarise(
+    rmse_toeic_proxy = weighted.mean(rmse_toeic_proxy, n, na.rm = TRUE),
+    mean_items = weighted.mean(mean_items, n, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  pivot_wider(
+    names_from = region,
+    values_from = c(rmse_toeic_proxy, mean_items)
+  ) |>
+  mutate(
+    worst_extreme_rmse = pmax(rmse_toeic_proxy_low,
+                              rmse_toeic_proxy_high,
+                              na.rm = TRUE),
+    extreme_ratio = worst_extreme_rmse / rmse_toeic_proxy_middle,
+    theta_status = status_label(extreme_ratio <= 1.25, "OK", "端の精度を確認")
+  ) |>
+  arrange(desc(extreme_ratio))
+
+theta_extreme_tbl |>
+  transmute(
+    条件 = condition_label,
+    規則 = rule,
+    `Q1 RMSE` = fmt_num(rmse_toeic_proxy_low, 2),
+    `Q2-Q4 RMSE` = fmt_num(rmse_toeic_proxy_middle, 2),
+    `Q5 RMSE` = fmt_num(rmse_toeic_proxy_high, 2),
+    `端/中央比` = fmt_num(extreme_ratio, 2),
+    判定 = theta_status
+  ) |>
+  kable(align = "llrrrrl") |>
+  kable_styling(full_width = TRUE, font_size = 12)
+```
+
+### Hit/CR別スコア報告に必要な項目数
+
+最小項目数20または30のCAT条件について、Hit/CRそれぞれが最低5項目以上提示されるかを確認します。ここが満たされない条件は、Hit/CR別スコアを安定して報告するには不向きです。
+
+```{r}
+#| label: reporting-floor-check
+reporting_floor_tbl <- person_tbl |>
+  filter(stop_rule %in% c("blueprint_pser", "morris_pser"),
+         min_items %in% c(20, 30)) |>
+  group_by(condition_id, condition_label, stop_rule, min_items, max_items,
+           stop_pser, pser_hypo, pser_hyper, randomesque, target_hit_prop) |>
+  summarise(
+    n = n(),
+    mean_items = mean(n_items, na.rm = TRUE),
+    min_hit = min(n_hit, na.rm = TRUE),
+    min_cr = min(n_cr, na.rm = TRUE),
+    p05_hit = as.numeric(quantile(n_hit, 0.05, na.rm = TRUE)),
+    p05_cr = as.numeric(quantile(n_cr, 0.05, na.rm = TRUE)),
+    prop_hitcr_ge5 = mean(n_hit >= 5 & n_cr >= 5, na.rm = TRUE),
+    prop_hitcr_ge10 = mean(n_hit >= 10 & n_cr >= 10, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  left_join(
+    summary_tbl |>
+      select(condition_id, rmse_toeic_proxy, max_item_exposure_rate),
+    by = "condition_id"
+  ) |>
+  mutate(
+    reporting_status = status_label(prop_hitcr_ge5 >= 0.995, "OK", "不十分")
+  ) |>
+  arrange(min_items, rmse_toeic_proxy, mean_items)
+
+reporting_floor_tbl |>
+  slice_head(n = 20) |>
+  transmute(
+    条件 = condition_label,
+    `min/max` = paste0(min_items, "/", max_items),
+    閾値 = case_when(
+      stop_rule == "blueprint_pser" ~ paste0("p=", fmt_num(stop_pser, 3)),
+      stop_rule == "morris_pser" ~ paste0(
+        "h-=", fmt_num(pser_hypo, 3),
+        ", h+=", ifelse(is.infinite(pser_hyper), "Inf",
+                        fmt_num(pser_hyper, 3))
+      ),
+      TRUE ~ ""
+    ),
+    r = randomesque,
+    平均項目数 = fmt_num(mean_items, 1),
+    `Hit最小` = min_hit,
+    `CR最小` = min_cr,
+    `Hit p05` = fmt_num(p05_hit, 1),
+    `CR p05` = fmt_num(p05_cr, 1),
+    `Hit/CR>=5` = percent(prop_hitcr_ge5, accuracy = 0.1),
+    `Hit/CR>=10` = percent(prop_hitcr_ge10, accuracy = 0.1),
+    判定 = reporting_status
+  ) |>
+  kable(align = "llrrrrrrrrrl") |>
+  kable_styling(full_width = TRUE, font_size = 11)
+```
+
+### 本番デフォルト候補の説明可能性
+
+本番デフォルトにする条件は、「固定40/50項目と比べてどれだけ短く、どれだけ精度を失うか」を説明できる必要があります。下表では、現行JSデフォルト、固定40/50、固定40項目以上の精度を40項目未満で満たす候補を並べます。
+
+```{r}
+#| label: production-default-check
+production_candidate_ids <- summary_tbl |>
+  mutate(
+    items_vs_fixed40 = mean_items - fixed_40$mean_items,
+    rmse_vs_fixed40 = rmse_toeic_proxy / fixed_40$rmse_toeic_proxy,
+    rmse_vs_fixed50 = rmse_toeic_proxy / fixed_50$rmse_toeic_proxy
+  ) |>
+  filter(
+    condition_id %in% c(
+      "current_js_default_min0_max160_p0.01",
+      "fixed_40",
+      "fixed_50"
+    ) |
+      (mean_items < fixed_40$mean_items &
+         rmse_toeic_proxy <= fixed_40$rmse_toeic_proxy &
+         prop_reporting_floor_met >= 0.995)
+  ) |>
+  arrange(rmse_toeic_proxy, mean_items) |>
+  pull(condition_id)
+
+production_default_tbl <- summary_tbl |>
+  filter(condition_id %in% production_candidate_ids) |>
+  mutate(
+    items_vs_fixed40 = mean_items - fixed_40$mean_items,
+    items_vs_fixed50 = mean_items - fixed_50$mean_items,
+    rmse_vs_fixed40 = rmse_toeic_proxy / fixed_40$rmse_toeic_proxy,
+    rmse_vs_fixed50 = rmse_toeic_proxy / fixed_50$rmse_toeic_proxy,
+    default_status = case_when(
+      condition_id == "fixed_50" ~ "精度基準",
+      condition_id == "fixed_40" ~ "短縮基準",
+      mean_items < fixed_40$mean_items &
+        rmse_toeic_proxy <= fixed_40$rmse_toeic_proxy &
+        prop_reporting_floor_met >= 0.995 ~ "本番候補",
+      TRUE ~ "比較用"
+    )
+  ) |>
+  arrange(default_status != "本番候補", rmse_toeic_proxy, mean_items)
+
+write_csv(production_default_tbl,
+          file.path(output_dir, "cat_production_default_candidates.csv"))
+
+production_default_tbl |>
+  transmute(
+    条件 = condition_label,
+    規則 = rule,
+    判定 = default_status,
+    `目標Hit%` = percent(target_hit_prop, accuracy = 1),
+    `実測Hit%` = percent(mean_hit_share, accuracy = 0.1),
+    平均項目数 = fmt_num(mean_items, 1),
+    `固定40比項目` = fmt_signed(items_vs_fixed40, 1),
+    `固定50比項目` = fmt_signed(items_vs_fixed50, 1),
+    `固定40比RMSE` = fmt_num(rmse_vs_fixed40, 3),
+    `固定50比RMSE` = fmt_num(rmse_vs_fixed50, 3),
+    `TOEIC proxy RMSE` = fmt_num(rmse_toeic_proxy, 2),
+    `最大露出率` = percent(max_item_exposure_rate, accuracy = 0.1)
+  ) |>
+  kable(align = "lllrrrrrrrrr") |>
+  kable_styling(full_width = TRUE, font_size = 12)
+```
+
+```{r}
+#| label: production-default-note
+#| results: asis
+deployable_count <- sum(production_default_tbl$default_status == "本番候補")
+current_default <- summary_tbl |>
+  filter(condition_id == "current_js_default_min0_max160_p0.01") |>
+  slice(1)
+
+cat("::: {.callout-note}\n")
+if (nrow(current_default) == 1) {
+  cat(sprintf(
+    "現行JSデフォルトは平均 %.1f 項目、TOEIC proxy RMSE %.2f です。固定40項目のRMSE %.2f と比べると、%sです。\n\n",
+    current_default$mean_items,
+    current_default$rmse_toeic_proxy,
+    fixed_40$rmse_toeic_proxy,
+    ifelse(current_default$rmse_toeic_proxy <= fixed_40$rmse_toeic_proxy,
+           "固定40相当以上の精度",
+           "固定40より精度が低い")
+  ))
+}
+if (deployable_count > 0) {
+  cat("固定40項目より短く、固定40項目以上のRMSEを満たすCAT候補があります。")
+  cat("候補を本番デフォルトにする場合は、露出率をさらに下げるため randomesque や露出制御を追加検討します。\n")
+} else {
+  cat("固定40項目より短く、固定40項目以上のRMSEを満たす候補はありません。")
+  cat("本番デフォルトは固定40/50項目、またはPSER閾値・最小項目数を再調整した条件から選ぶ必要があります。\n")
+}
+cat(":::\n")
+```
+
+## 研究用途別プロトコル
+
+CAT版を研究利用する場合、全研究に単一の停止条件を強制するより、目的別の標準プロファイルを用意し、カスタム設定はログと注意書きつきで許可する方が実用的です。ここではシミュレーション結果に基づいて、短時間実施、標準実施、精密測定の候補を自動選定します。
+
+```{r}
+#| label: research-use-profiles
+research_profile_specs <- tibble::tribble(
+  ~profile_id, ~profile_label, ~intended_use, ~min_allowed, ~max_allowed,
+  ~max_target_se,
+  ~timing_recommendation, ~interpretation_level, ~guardrail,
+  "short_screening", "Short / Screening",
+  "大規模調査、授業内実施、群平均・粗いスクリーニング",
+  20L, 50L, 0.70, "Untimed推奨。Timedは処理速度を含む別条件として扱う",
+  "群レベル中心。個人スコアの強い解釈は避ける",
+  "固定40/50項目よりRMSEが悪い可能性を明記する",
+  "balanced_default", "Balanced / Default",
+  "通常の研究用途、群比較、相関・回帰分析",
+  30L, 60L, 0.64, "Untimedを標準。Timedは反応時間研究または制約つき実施で使用",
+  "群レベルと限定的な個人差解釈",
+  "Hit/CR比率は1:1を標準にし、カスタム時は実測比率を報告する",
+  "precision_validation", "Precision / Validation",
+  "妥当性検証、基準関連研究、個人差研究、追試用ベンチマーク",
+  30L, 80L, 0.60, "Untimed推奨。Timed化する場合は別尺度条件として分析する",
+  "最も保守的。固定長版との比較や妥当性検証向け",
+  "時短効果より精度とtheta端の安定性を優先する"
+)
+
+profile_candidate_pool <- summary_tbl |>
+  filter(
+    stop_rule == "morris_pser",
+    abs(target_hit_prop - 0.50) < 1e-9,
+    prop_reporting_floor_met >= 0.995
+  ) |>
+  mutate(
+    rmse_ratio_vs_fixed40 = rmse_toeic_proxy / fixed_40$rmse_toeic_proxy,
+    rmse_ratio_vs_fixed50 = rmse_toeic_proxy / fixed_50$rmse_toeic_proxy,
+    items_saved_vs_fixed50 = fixed_50$mean_items - mean_items
+  )
+
+profile_recommendations <- lapply(seq_len(nrow(research_profile_specs)), function(i) {
+  spec <- research_profile_specs[i, ]
+  pool <- profile_candidate_pool |>
+    filter(
+      min_items >= spec$min_allowed,
+      max_items <= spec$max_allowed,
+      target_se <= spec$max_target_se
+    ) |>
+    mutate(
+      profile_score = case_when(
+        spec$profile_id == "short_screening" ~
+          rank(mean_items, ties.method = "average") +
+            1.5 * rank(rmse_toeic_proxy, ties.method = "average") +
+            0.5 * rank(max_item_exposure_rate, ties.method = "average"),
+        spec$profile_id == "precision_validation" ~
+          2.0 * rank(rmse_toeic_proxy, ties.method = "average") +
+            rank(mean_joint_se, ties.method = "average") +
+            0.25 * rank(mean_items, ties.method = "average"),
+        TRUE ~
+          rank(rmse_toeic_proxy, ties.method = "average") +
+            rank(mean_items, ties.method = "average") +
+            0.5 * rank(max_item_exposure_rate, ties.method = "average")
+      )
+    ) |>
+    arrange(profile_score, rmse_toeic_proxy, mean_items)
+  if (nrow(pool) == 0) {
+    return(bind_cols(spec, tibble::tibble(
+      condition_id = NA_character_,
+      condition_label = NA_character_,
+      mean_items = NA_real_,
+      p95_items = NA_real_,
+      rmse_toeic_proxy = NA_real_,
+      rmse_ratio_vs_fixed40 = NA_real_,
+      rmse_ratio_vs_fixed50 = NA_real_,
+      mean_joint_se = NA_real_,
+      max_item_exposure_rate = NA_real_,
+      target_hit_prop = NA_real_,
+      mean_hit_share = NA_real_,
+      randomesque = NA_integer_
+    )))
+  }
+  bind_cols(spec, pool |> slice(1))
+}) |>
+  bind_rows() |>
+  mutate(
+    pser_hyper_url = ifelse(is.infinite(pser_hyper), "inf", as.character(pser_hyper)),
+    url_params_untimed = ifelse(
+      is.na(condition_id),
+      "",
+      paste0(
+        "?stop_rule=morris_pser",
+        "&min_items=", min_items,
+        "&max_items=", max_items,
+        "&target_se=", target_se,
+        "&pser_hypo=", pser_hypo,
+        "&pser_hyper=", pser_hyper_url,
+        "&timing=untimed&pace=self"
+      )
+    ),
+    url_params_timed = ifelse(
+      is.na(condition_id),
+      "",
+      paste0(
+        "?stop_rule=morris_pser",
+        "&min_items=", min_items,
+        "&max_items=", max_items,
+        "&target_se=", target_se,
+        "&pser_hypo=", pser_hypo,
+        "&pser_hyper=", pser_hyper_url,
+        "&timing=timed&response_window_ms=1250"
+      )
+    )
+  )
+
+write_csv(
+  profile_recommendations,
+  file.path(output_dir, "cat_research_use_profiles.csv")
+)
+
+profile_recommendations |>
+  transmute(
+    プロファイル = profile_label,
+    用途 = intended_use,
+    候補条件 = condition_label,
+    `min/max` = ifelse(is.na(condition_id), "", paste0(min_items, "/", max_items)),
+    `平均項目数` = fmt_num(mean_items, 1),
+    `P95項目数` = fmt_num(p95_items, 1),
+    `TOEIC proxy RMSE` = fmt_num(rmse_toeic_proxy, 2),
+    `固定40比RMSE` = fmt_num(rmse_ratio_vs_fixed40, 3),
+    `固定50比RMSE` = fmt_num(rmse_ratio_vs_fixed50, 3),
+    `実測Hit%` = percent(mean_hit_share, accuracy = 0.1),
+    `Timed/Untimed` = timing_recommendation,
+    解釈 = interpretation_level
+  ) |>
+  kable(align = "lllrrrrrrlll") |>
+  kable_styling(full_width = TRUE, font_size = 11)
+```
+
+```{r}
+#| label: research-use-profile-note
+#| results: asis
+cat("::: {.callout-important}\n")
+cat("研究者裁量で `min_items`, `max_items`, `timing`, `response_window_ms`, `pace`, `stop_rule`, `target_se`, `pser_hypo`, `pser_hyper` を変更することは可能です。")
+cat("ただし、カスタム設定を使う場合は、同一研究内で条件を混在させず、エクスポートされたメタデータから設定値を必ず報告してください。")
+cat("特にTimed版は反応速度・注意・テスト方略を含むため、Untimed版と同じ尺度条件として単純比較しない方が安全です。\n")
+cat(":::\n")
+```

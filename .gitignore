@@ -1,4 +1,5 @@
 .DS_Store
 *.tmp
 *.bak
-
+Simulation/outputs*/
+/LJT_CAT_simulation_report*.html

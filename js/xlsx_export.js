@@ -170,6 +170,12 @@
         '; stop when predicted joint-SE reduction < stop_pser (' +
         session.stop_pser + ')';
     }
+    if (rule === 'morris_pser') {
+      return 'Morris-style PSER: ' + minText +
+        '; hypo = ' + session.pser_hypo +
+        ', hyper = ' + session.pser_hyper +
+        ', target SE = ' + session.target_se;
+    }
     if (rule === 'pser') {
       return 'PSER: ' + minText +
         '; stop when predicted SE reduction < stop_pser (' +
@@ -723,6 +729,10 @@
         { key: 'delivery',            value: payload.session.delivery || payload.session.mode },
         { key: 'algorithm',           value: payload.session.algorithm || '' },
         { key: 'stop_rule',           value: payload.session.stop_rule || '' },
+        { key: 'protocol_profile',    value: payload.session.protocol_profile || '' },
+        { key: 'min_items',           value: payload.session.min_items },
+        { key: 'max_items',           value: payload.session.max_items },
+        { key: 'target_se',           value: payload.session.target_se },
         { key: 'language',            value: payload.session.language || '' },
         { key: 'research_mode',       value: !!payload.session.research_mode },
         { key: 'theta_grid',
@@ -739,6 +749,10 @@
           value: payload.session.min_answered_per_condition_required },
         { key: 'stop_pser',
           value: payload.session.stop_pser },
+        { key: 'pser_hypo',
+          value: payload.session.pser_hypo },
+        { key: 'pser_hyper',
+          value: payload.session.pser_hyper },
         { key: 'quota_tol',
           value: payload.session.quota_tol },
         { key: 'theta_scale',
