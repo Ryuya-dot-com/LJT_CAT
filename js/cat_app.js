@@ -9,6 +9,7 @@
  *                 ?keymap=counterbalanced|f_appropriate|j_appropriate
  *                 ?timing=timed|untimed &response_window_ms=1250
  *                 ?auto_play_audio=1|0 &audio_rate=1 &fixation_ms=500 &post_response_ms=350 &max_condition_run=2
+ *                 ?participant_report=none|basic|educational
  *                 ?lang=ja|en
  *                 ?research=1 (show calibration / item-bank audit panel)
  *
@@ -21,8 +22,8 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '2.8.2';
-  const ASSET_CACHE_VERSION = '20260531a';
+  const APP_VERSION = '2.8.3';
+  const ASSET_CACHE_VERSION = '20260531d';
   const UX_INSTRUCTION_VERSION = 'practice_instructions_20260428_refined';
   // Captured at script-eval time so it can be reported as `code_loaded_at`
   // build/repro metadata in the Excel output (alongside session save time).
@@ -52,6 +53,7 @@
     fixation_ms: 500,
     post_response_ms: 350,
     pace: 'auto',
+    participant_report: 'none',
     max_condition_run: 2,
     theta_min: -6,
     theta_max: 6,
@@ -119,7 +121,7 @@
       notePractice: '練習が<strong>4問</strong>あり、そのあと本試行に進みます。',
       noteAdaptiveLength: '本試行の問題数は回答状況に応じて変わります。',
       noteNoSpelling: '判断対象語のスペルは画面に表示されません。',
-      noteNoScoreShown: '本試行では正誤フィードバックやスコアは表示されません。',
+      noteNoScoreShown: '本試行中は正誤フィードバックやスコアは表示されません。',
       noteKeys: '音声終了後、画面に表示される割り当てに従って <strong>F</strong> / <strong>J</strong> キーで回答します。',
       noteHeadphones: 'ヘッドホン / イヤホンの使用を強く推奨します。',
       participantInfo: '参加者情報',
@@ -156,6 +158,35 @@
       downloadAgain: 'もう一度ダウンロードする',
       endNote: '結果ファイルがダウンロードフォルダに保存されました。画面に表示されたファイル名を確認し、研究者の指示にしたがって共有してください。',
       resultFilename: '保存ファイル: {filename}',
+      resultReportTitle: 'スコアレポート',
+      resultReportDisabled: 'この実施プロトコルでは、受験者画面にスコアを表示しません。',
+      resultReportInvalidTitle: 'スコアは表示できません',
+      resultReportInvalidBody: '有効回答数またはHit/CRの条件別カバレッジが不足しているため、受験者向けスコアは表示しません。研究者用Excelにはscoring_statusが記録されています。',
+      resultReportToeicLabel: 'TOEIC換算推定値',
+      resultReportRangeLabel: '不確実性範囲',
+      resultReportPercentileLabel: '参照分布内の位置',
+      resultReportItemsLabel: '有効回答',
+      resultReportPrecisionLabel: '測定精度',
+      resultReportBalanceLabel: 'Hit / CR回答数',
+      resultReportQualityLabel: '回答品質',
+      resultReportBandLabel: '相対的な位置づけ',
+      resultReportNextFocusLabel: '学習の焦点',
+      resultReportCaution: 'この値はLJT-CATの研究用推定値であり、公式TOEICスコアではありません。解釈は研究者または教員の説明に従ってください。',
+      resultReportRangeValue: '{low}〜{high}',
+      resultReportPercentileValue: '参照分布内の約{percentile}パーセンタイル',
+      resultReportItemsValue: '{answered} / {administered}項目',
+      resultReportBalanceValue: 'Hit {hit} / CR {cr}',
+      resultReportPrecisionHigh: '高い',
+      resultReportPrecisionModerate: '標準',
+      resultReportPrecisionExploratory: '参考値',
+      resultReportQualityGood: '大きな注意フラグはありません',
+      resultReportQualityCheck: '一部の回答状況に注意が必要です',
+      resultReportBandDeveloping: '基礎を固める段階',
+      resultReportBandLowerMiddle: '参照集団の下位から中位',
+      resultReportBandMiddle: '参照集団の中位付近',
+      resultReportBandUpperMiddle: '参照集団の中位から上位',
+      resultReportBandHigh: '参照集団の上位',
+      resultReportNextFocus: '一語だけで判断せず、文全体の意味、語の自然な組み合わせ、音声で聞こえた語の文脈適合性を結びつけて練習してください。',
       appropriate: '適切',
       inappropriate: '不適切',
       keySuffix: 'キー',
@@ -233,6 +264,14 @@
       researchProfilePrecisionAdvice: '妥当性検証・個人差研究向けです。時短より精度と固定長版との比較可能性を優先します。',
       researchMethodsTitle: 'Methods用記述',
       researchClassroomTitle: '教員・実施者向け説明',
+      researchPanelHelpLabel: '研究者・教員向けヘルプ',
+      researchPanelHelpTitle: 'ヘルプ',
+      researchPanelHelpResearcherTitle: '研究者向け',
+      researchPanelHelpResearcherBody: '用途に合うプロファイルを選び、参加者用URLとMethods用記述を同じ設定から生成してください。Customを使う場合はmetadataとprotocol_manifestの設定値をすべて報告してください。',
+      researchPanelHelpInstructorTitle: '教員・実施者向け',
+      researchPanelHelpInstructorBody: '参加者には参加者用URLのみを配布し、デスクトップChrome、ヘッドホンまたはイヤホン、静かな環境を指定してください。終了後は自動保存された.xlsxファイルを回収してください。',
+      researchPanelHelpAuditTitle: '確認項目',
+      researchPanelHelpAuditBody: '回収後はquality_flags、timeout_rate、音声再生失敗、Hit/CR別項目数、protocol_profileを確認してください。',
       researchTimingModeLabel: '時間制限',
       researchDeliveryModeLabel: '実施モード',
       researchAdaptiveOption: 'Adaptive CAT',
@@ -251,6 +290,11 @@
       researchPaceModeLabel: '回答後の進行',
       researchPaceAuto: '自動で次へ',
       researchPaceSelf: 'Spaceキーで次へ',
+      researchParticipantReportLabel: '受験者スコアレポート',
+      researchParticipantReportNone: '表示しない',
+      researchParticipantReportBasic: 'Basic: 推定値のみ',
+      researchParticipantReportEducational: 'Educational: 推定値 + 学習コメント',
+      researchParticipantReportHelp: '既定では非表示です。表示する場合も項目別正答やtargetwordは出さず、推定値・不確実性・品質注意だけを返します。',
       researchMaxConditionRunLabel: '同一条件の最大連続数',
       researchMaxPlayFailsLabel: '音声再生失敗の許容回数',
       researchAdaptiveSettingsTitle: 'Adaptive設定',
@@ -318,9 +362,18 @@
       researchApplyProtocol: '設定をURLに反映',
       researchParticipantUrlLabel: '参加者用URL',
       researchCopyUrl: 'URLをコピー',
+      researchExportProtocol: 'プロトコルJSONを書き出し',
+      researchImportProtocol: 'プロトコルJSONを読み込み',
       researchCopied: 'コピーしました',
       researchCopyFailed: 'コピーできませんでした。URL欄を選択してコピーしてください。',
       researchProtocolApplied: '設定を反映しました。',
+      researchProtocolExported: 'プロトコルJSONを書き出しました。',
+      researchProtocolImported: 'プロトコルJSONを読み込みました。',
+      researchProtocolImportFailed: 'プロトコルJSONを読み込めませんでした。',
+      researchCalibrationSafetyTitle: 'Calibration-safe チェック',
+      researchCalibrationSafetySafe: '安全',
+      researchCalibrationSafetyCaution: '注意',
+      researchCalibrationSafetyBlocked: '要修正',
       researchTimedHelp: '1250 ms は既定値です。比較研究では 1000 / 1250 / 1500 ms などをURLで固定してください。',
       researchUntimedHelp: 'Untimedでは制限時間を設けず、RTは通常どおり記録されます。',
       researchItemSummaryTitle: '項目プール要約',
@@ -390,6 +443,35 @@
       downloadAgain: 'Download again',
       endNote: 'The result file has been saved to the Downloads folder. Check the filename shown on screen and share it according to the researcher’s instructions.',
       resultFilename: 'Saved file: {filename}',
+      resultReportTitle: 'Score Report',
+      resultReportDisabled: 'This administration protocol does not show scores on the participant screen.',
+      resultReportInvalidTitle: 'Score not shown',
+      resultReportInvalidBody: 'The number of valid responses or the Hit/CR condition coverage was insufficient, so no participant-facing score is shown. The researcher Excel file records the scoring_status.',
+      resultReportToeicLabel: 'TOEIC-derived estimate',
+      resultReportRangeLabel: 'Uncertainty range',
+      resultReportPercentileLabel: 'Reference-distribution position',
+      resultReportItemsLabel: 'Valid responses',
+      resultReportPrecisionLabel: 'Measurement precision',
+      resultReportBalanceLabel: 'Hit / CR responses',
+      resultReportQualityLabel: 'Response quality',
+      resultReportBandLabel: 'Relative position',
+      resultReportNextFocusLabel: 'Learning focus',
+      resultReportCaution: 'This is a research estimate from LJT-CAT, not an official TOEIC score. Interpret it according to the researcher or instructor guidance.',
+      resultReportRangeValue: '{low}-{high}',
+      resultReportPercentileValue: 'about the {percentile}th percentile in the reference distribution',
+      resultReportItemsValue: '{answered} / {administered} items',
+      resultReportBalanceValue: 'Hit {hit} / CR {cr}',
+      resultReportPrecisionHigh: 'High',
+      resultReportPrecisionModerate: 'Standard',
+      resultReportPrecisionExploratory: 'Exploratory',
+      resultReportQualityGood: 'No major caution flags',
+      resultReportQualityCheck: 'Some response-quality cautions require review',
+      resultReportBandDeveloping: 'Developing foundation',
+      resultReportBandLowerMiddle: 'Lower-to-middle reference range',
+      resultReportBandMiddle: 'Middle reference range',
+      resultReportBandUpperMiddle: 'Middle-to-upper reference range',
+      resultReportBandHigh: 'Upper reference range',
+      resultReportNextFocus: 'Practice linking the word you heard to the whole sentence meaning, natural word combinations, and contextual fit rather than judging from a single word alone.',
       appropriate: 'Appropriate',
       inappropriate: 'Inappropriate',
       keySuffix: 'key',
@@ -467,6 +549,14 @@
       researchProfilePrecisionAdvice: 'For validation and individual-difference research. Prioritizes precision and fixed-form comparability over time saving.',
       researchMethodsTitle: 'Methods Text',
       researchClassroomTitle: 'Instructor / Administrator Text',
+      researchPanelHelpLabel: 'Researcher and instructor help',
+      researchPanelHelpTitle: 'Help',
+      researchPanelHelpResearcherTitle: 'For researchers',
+      researchPanelHelpResearcherBody: 'Choose a profile that matches the study purpose, then generate the participant URL and Methods text from the same settings. If using Custom, report all settings from metadata and protocol_manifest.',
+      researchPanelHelpInstructorTitle: 'For instructors / administrators',
+      researchPanelHelpInstructorBody: 'Distribute only the participant URL. Ask participants to use desktop Chrome, headphones or earphones, and a quiet setting. Collect the downloaded .xlsx file after completion.',
+      researchPanelHelpAuditTitle: 'Audit checks',
+      researchPanelHelpAuditBody: 'After collection, check quality_flags, timeout_rate, audio playback failures, Hit/CR item counts, and protocol_profile.',
       researchTimingModeLabel: 'Timing mode',
       researchDeliveryModeLabel: 'Delivery mode',
       researchAdaptiveOption: 'Adaptive CAT',
@@ -485,6 +575,11 @@
       researchPaceModeLabel: 'Post-response advance',
       researchPaceAuto: 'Auto-advance',
       researchPaceSelf: 'Space key to continue',
+      researchParticipantReportLabel: 'Participant score report',
+      researchParticipantReportNone: 'Do not show',
+      researchParticipantReportBasic: 'Basic: estimate only',
+      researchParticipantReportEducational: 'Educational: estimate + learning comment',
+      researchParticipantReportHelp: 'Hidden by default. If enabled, the participant screen shows only estimates, uncertainty, and quality cautions; it never shows item-level answers or targetwords.',
       researchMaxConditionRunLabel: 'Maximum same-condition run',
       researchMaxPlayFailsLabel: 'Allowed audio playback failures',
       researchAdaptiveSettingsTitle: 'Adaptive Settings',
@@ -552,9 +647,18 @@
       researchApplyProtocol: 'Apply to URL',
       researchParticipantUrlLabel: 'Participant URL',
       researchCopyUrl: 'Copy URL',
+      researchExportProtocol: 'Export protocol JSON',
+      researchImportProtocol: 'Import protocol JSON',
       researchCopied: 'Copied',
       researchCopyFailed: 'Could not copy. Select and copy the URL field manually.',
       researchProtocolApplied: 'Protocol settings applied.',
+      researchProtocolExported: 'Protocol JSON exported.',
+      researchProtocolImported: 'Protocol JSON imported.',
+      researchProtocolImportFailed: 'Could not import protocol JSON.',
+      researchCalibrationSafetyTitle: 'Calibration-safe Check',
+      researchCalibrationSafetySafe: 'Safe',
+      researchCalibrationSafetyCaution: 'Caution',
+      researchCalibrationSafetyBlocked: 'Needs fix',
       researchTimedHelp: '1250 ms is the default. For comparison studies, fix 1000 / 1250 / 1500 ms or similar values in the URL.',
       researchUntimedHelp: 'Untimed has no response deadline; RT is still recorded.',
       researchItemSummaryTitle: 'Item Pool Summary',
@@ -860,6 +964,8 @@
     state.params.pace = booleanParam(p, 'self_paced', false)
       ? 'self'
       : normalizePace(p.get('pace') || profileDefault('pace', presentationOption('pace', DEFAULTS.pace)));
+    state.params.participant_report = normalizeParticipantReport(
+      p.get('participant_report') || DEFAULTS.participant_report);
     state.params.max_condition_run = boundedNumberParam(
       p, 'max_condition_run',
       Number(presentationOption('maxConditionRun', DEFAULTS.max_condition_run)),
@@ -1039,6 +1145,24 @@
       : 'auto';
   }
 
+  function normalizeParticipantReport (raw) {
+    const value = String(raw || '').trim().toLowerCase();
+    if (['basic', 'summary', 'score', 'scores', '1', 'true', 'yes', 'on'].includes(value)) {
+      return 'basic';
+    }
+    if (['educational', 'education', 'learning', 'full', 'detailed'].includes(value)) {
+      return 'educational';
+    }
+    return 'none';
+  }
+
+  function participantReportLabel (mode) {
+    const value = normalizeParticipantReport(mode);
+    if (value === 'basic') return t('researchParticipantReportBasic');
+    if (value === 'educational') return t('researchParticipantReportEducational');
+    return t('researchParticipantReportNone');
+  }
+
   function normalizeAlgorithm (raw) {
     const value = String(raw || '').trim().toLowerCase();
     return ['blueprint', 'alternating', 'quota'].includes(value) ? value : 'blueprint';
@@ -1176,6 +1300,11 @@
     );
     const pace = normalizePace(opts.pace || state.params.pace || DEFAULTS.pace);
     const keymap = normalizeKeymap(opts.keymap || state.params.keymap);
+    const participantReport = normalizeParticipantReport(
+      opts.participant_report === undefined
+        ? state.params.participant_report
+        : opts.participant_report
+    );
     let thetaMin = boundedNumberValue(
       opts.theta_min === undefined ? state.params.theta_min : opts.theta_min,
       DEFAULTS.theta_min, -8, 0, false);
@@ -1214,6 +1343,7 @@
     u.searchParams.set('post_response_ms', String(postMs));
     u.searchParams.set('pace', pace);
     u.searchParams.delete('self_paced');
+    u.searchParams.set('participant_report', participantReport);
     u.searchParams.set('max_condition_run', String(maxRun));
     u.searchParams.set('max_play_fails', String(maxFails));
     u.searchParams.set('nt_threshold_ms', String(ntThresholdMs));
@@ -2215,6 +2345,8 @@
     const stopPser = boundedNumberValue(o.stop_pser, state.params.stop_pser, 0.0001, 0.1, false);
     const pserHypo = boundedNumberValue(o.pser_hypo, state.params.pser_hypo, 0.0001, 0.1, false);
     const pserHyper = pserHyperParamValue(boundedPserHyperValue(o.pser_hyper, state.params.pser_hyper));
+    const reportMode = normalizeParticipantReport(
+      o.participant_report === undefined ? state.params.participant_report : o.participant_report);
     const stopConfigText = state.lang === 'ja'
       ? (stopRule === 'morris_pser'
           ? 'target_se=' + targetSe + '、pser_hypo=' + pserHypo + '、pser_hyper=' + pserHyper
@@ -2235,32 +2367,49 @@
           ? 'Timed条件（音声終了後 ' + responseWindow + ' ms）'
           : 'timed administration with a ' + responseWindow + ' ms response window after audio offset')
       : (state.lang === 'ja' ? 'Untimed・自己ペース条件' : 'untimed, self-paced administration');
+    const reportText = reportMode === 'none'
+      ? (state.lang === 'ja'
+          ? '受験者画面にはスコアレポートを表示しなかった'
+          : 'no participant-facing score report was shown')
+      : (state.lang === 'ja'
+          ? '受験者画面には ' + participantReportLabel(reportMode) + ' を表示した'
+          : 'the participant screen showed the ' + participantReportLabel(reportMode) + ' report');
     if (state.lang === 'ja') {
       return '本研究では、LJT-CATを' + protocolProfileLabel(profile) +
         'プロファイルで実施した。CATはHit/CRの2条件別1D 2PL EAP推定で採点し、項目選択は ' +
         algorithm + ' アルゴリズムを用いた。停止則は ' +
         stopRule + '、最小項目数 ' + minItems + '、最大項目数 ' + maxItems +
         '、' + stopConfigText + ' とした。実施は' + timingText +
-        'で行い、F/Jキー割当、反応時間、停止理由、提示項目数、Hit/CR別項目数、全URL由来設定をExcelのmetadataおよびprotocol_manifestに保存した。';
+        'で行い、' + reportText + '。F/Jキー割当、反応時間、停止理由、提示項目数、Hit/CR別項目数、全URL由来設定をExcelのmetadataおよびprotocol_manifestに保存した。';
     }
     return 'The LJT-CAT was administered using the ' + protocolProfileLabel(profile) +
       ' profile. The CAT was scored with per-condition Hit/CR 1D 2PL EAP estimation, and item selection used the ' +
       algorithm + ' algorithm. The stopping rule was ' +
       stopRule + ', with min_items=' + minItems + ', max_items=' + maxItems +
       ', and ' + stopConfigText + '. Administration used ' + timingText +
-      '. The F/J key mapping, response times, stopping reason, administered item count, Hit/CR counts, and URL-derived protocol settings were saved in the Excel metadata and protocol_manifest sheets.';
+      '; ' + reportText + '. The F/J key mapping, response times, stopping reason, administered item count, Hit/CR counts, and URL-derived protocol settings were saved in the Excel metadata and protocol_manifest sheets.';
   }
 
   function buildResearchClassroomText (overrides) {
     const o = overrides || {};
     const timing = normalizeTiming(o.timing || state.params.timing);
     const profile = normalizeProtocolProfile(o.protocol_profile || state.params.protocol_profile);
+    const reportMode = normalizeParticipantReport(
+      o.participant_report === undefined ? state.params.participant_report : o.participant_report);
+    const reportNote = reportMode === 'none'
+      ? (state.lang === 'ja'
+          ? '受験者画面にはスコアを表示しません。'
+          : 'The participant screen will not show a score. ')
+      : (state.lang === 'ja'
+          ? '終了画面に' + participantReportLabel(reportMode) + 'を表示します。公式TOEICスコアではないことを説明してください。'
+          : 'The final screen will show the ' + participantReportLabel(reportMode) + ' report. Explain that it is not an official TOEIC score. ');
     if (state.lang === 'ja') {
       return '実施者向け: 参加者にはデスクトップ版Chrome、ヘッドホンまたはイヤホン、静かな環境を用意してもらってください。プロファイルは ' +
         protocolProfileLabel(profile) + ' です。' +
         (timing === 'timed'
           ? 'Timed条件のため、回答が遅い場合はタイムアウトとして記録されます。'
           : 'Untimed条件のため、参加者は自分のペースで回答できます。') +
+        reportNote +
         '終了後に自動ダウンロードされる.xlsxファイルを回収し、quality_flags、timeout_rate、音声再生失敗、最低項目数未達の有無を確認してください。';
     }
     return 'Administrator note: Participants should use desktop Chrome with headphones or earphones in a quiet setting. The selected profile is ' +
@@ -2268,7 +2417,216 @@
       (timing === 'timed'
         ? 'Because this is a timed condition, late responses are recorded as timeouts. '
         : 'Because this is an untimed condition, participants can respond at their own pace. ') +
+      reportNote +
       'After completion, collect the downloaded .xlsx file and check quality_flags, timeout_rate, audio playback failures, and minimum-item coverage.';
+  }
+
+  function researchProtocolSettings (overrides) {
+    const o = overrides || {};
+    return {
+      schema: 'ljt-cat-protocol',
+      schema_version: 1,
+      language: state.lang,
+      lab_code: state.labCode || '',
+      delivery: 'adaptive',
+      protocol_profile: normalizeProtocolProfile(o.protocol_profile || state.params.protocol_profile),
+      timing: normalizeTiming(o.timing || state.params.timing),
+      response_window_ms: boundedNumberValue(
+        o.response_window_ms === undefined ? state.params.response_window_ms : o.response_window_ms,
+        DEFAULTS.response_window_ms, 250, 10000, true),
+      keymap: normalizeKeymap(o.keymap || state.params.keymap),
+      auto_play_audio: o.auto_play_audio === undefined ? autoPlayAudio() : !!o.auto_play_audio,
+      audio_rate: boundedNumberValue(
+        o.audio_rate === undefined ? audioPlaybackRate() : o.audio_rate,
+        DEFAULTS.audio_rate, 0.75, 1.25, false),
+      fixation_ms: boundedNumberValue(
+        o.fixation_ms === undefined ? fixationMs() : o.fixation_ms,
+        DEFAULTS.fixation_ms, 0, 3000, true),
+      post_response_ms: boundedNumberValue(
+        o.post_response_ms === undefined ? postResponseMs() : o.post_response_ms,
+        DEFAULTS.post_response_ms, 0, 5000, true),
+      pace: normalizePace(o.pace || state.params.pace),
+      participant_report: normalizeParticipantReport(
+        o.participant_report === undefined
+          ? state.params.participant_report
+          : o.participant_report),
+      max_condition_run: boundedNumberValue(
+        o.max_condition_run === undefined ? maxConditionRun() : o.max_condition_run,
+        DEFAULTS.max_condition_run, 1, 10, true),
+      max_play_fails: boundedNumberValue(
+        o.max_play_fails === undefined ? state.params.max_play_fails : o.max_play_fails,
+        DEFAULTS.max_play_fails, 0, 10, true),
+      nt_threshold_ms: boundedNumberValue(
+        o.nt_threshold_ms === undefined ? state.params.nt_threshold_ms : o.nt_threshold_ms,
+        DEFAULTS.nt_threshold_ms, 50, 2000, true),
+      theta_min: boundedNumberValue(
+        o.theta_min === undefined ? state.params.theta_min : o.theta_min,
+        DEFAULTS.theta_min, -8, 0, false),
+      theta_max: boundedNumberValue(
+        o.theta_max === undefined ? state.params.theta_max : o.theta_max,
+        DEFAULTS.theta_max, 0, 8, false),
+      theta_step: boundedNumberValue(
+        o.theta_step === undefined ? state.params.theta_step : o.theta_step,
+        DEFAULTS.theta_step, 0.001, 0.1, false),
+      theta2_min: boundedNumberValue(
+        o.theta2_min === undefined ? state.params.theta2_min : o.theta2_min,
+        DEFAULTS.theta2_min, -6, 0, false),
+      theta2_max: boundedNumberValue(
+        o.theta2_max === undefined ? state.params.theta2_max : o.theta2_max,
+        DEFAULTS.theta2_max, 0, 6, false),
+      theta2_step: boundedNumberValue(
+        o.theta2_step === undefined ? state.params.theta2_step : o.theta2_step,
+        DEFAULTS.theta2_step, 0.05, 0.2, false),
+      algorithm: normalizeAlgorithm(o.algorithm || state.algorithm),
+      stop_rule: normalizeStopRule(o.stop_rule || state.stopRule),
+      min_items: boundedNumberValue(
+        o.min_items === undefined ? state.params.min_items : o.min_items,
+        DEFAULTS.min_items, 0, 160, true),
+      max_items: boundedNumberValue(
+        o.max_items === undefined ? state.params.max_items : o.max_items,
+        DEFAULTS.max_items, 1, 160, true),
+      target_se: boundedNumberValue(
+        o.target_se === undefined ? state.params.target_se : o.target_se,
+        DEFAULTS.target_se, 0.05, 2.0, false),
+      stop_pser: boundedNumberValue(
+        o.stop_pser === undefined ? state.params.stop_pser : o.stop_pser,
+        DEFAULTS.stop_pser, 0.0001, 0.1, false),
+      pser_hypo: boundedNumberValue(
+        o.pser_hypo === undefined ? state.params.pser_hypo : o.pser_hypo,
+        DEFAULTS.pser_hypo, 0.0001, 0.1, false),
+      pser_hyper: pserHyperParamValue(
+        boundedPserHyperValue(
+          o.pser_hyper === undefined ? state.params.pser_hyper : o.pser_hyper,
+          DEFAULTS.pser_hyper)),
+      quota_tol: boundedNumberValue(
+        o.quota_tol === undefined ? state.params.quota_tol : o.quota_tol,
+        DEFAULTS.quota_tol, 0, 0.49, false)
+    };
+  }
+
+  function assessCalibrationSafety (overrides) {
+    const s = researchProtocolSettings(overrides);
+    const ja = state.lang === 'ja';
+    const messages = [];
+    let status = 'safe';
+    const add = (level, jaText, enText) => {
+      if (level === 'blocked') status = 'blocked';
+      if (level === 'caution' && status === 'safe') status = 'caution';
+      messages.push({ level: level, text: ja ? jaText : enText });
+    };
+    add(
+      'safe',
+      '項目プールとIRTパラメータはロックされています。研究者設定は実施条件・停止則・記録形式のみを変更します。',
+      'The item pool and IRT parameters are locked. Researcher settings change administration, stopping, and recording only.'
+    );
+    if (s.max_items < s.min_items) {
+      add('blocked', '最大項目数が最小項目数を下回っています。', 'Maximum items is lower than minimum items.');
+    }
+    if (s.min_items < 20) {
+      add('caution', '最小項目数が20未満です。短すぎる設定は個人差推定を不安定にする可能性があります。', 'Minimum items is below 20; very short settings can destabilize individual estimates.');
+    }
+    if (s.max_items < 40) {
+      add('caution', '最大項目数が40未満です。停止則が十分に働かない可能性があります。', 'Maximum items is below 40; the stopping rule may have limited room to operate.');
+    }
+    if (s.protocol_profile === 'custom') {
+      add('caution', 'Custom設定です。同一研究内で混在させず、metadataとprotocol_manifestから全設定を報告してください。', 'This is a Custom protocol. Avoid mixing it within a study arm and report all settings from metadata and protocol_manifest.');
+    }
+    if (s.timing === 'timed') {
+      add('caution', 'Timed条件はキャリブレーションを壊しませんが、処理速度や方略も反映する別条件として扱ってください。', 'Timed administration does not alter calibration, but treat it as a distinct condition that also reflects speed and strategy.');
+    }
+    if (Math.abs(s.audio_rate - 1) > 1e-9) {
+      add('caution', '音声速度が1.00以外です。聴取条件が変わるため、同一研究内では固定してください。', 'Audio speed differs from 1.00. This changes the listening condition, so keep it fixed within a study.');
+    }
+    if (s.algorithm !== 'blueprint') {
+      add('caution', '項目選択アルゴリズムがblueprint以外です。キャリブレーションは維持されますが、提示系列の比較可能性が変わります。', 'The item-selection algorithm is not blueprint. Calibration is preserved, but comparability of administration paths changes.');
+    }
+    if (s.theta_min !== DEFAULTS.theta_min || s.theta_max !== DEFAULTS.theta_max ||
+        s.theta_step !== DEFAULTS.theta_step) {
+      add('caution', '1D theta gridが既定値と異なります。数値感度確認以外では既定値を推奨します。', 'The 1D theta grid differs from the default. Use defaults unless this is a numerical sensitivity check.');
+    }
+    return { status: status, settings: s, messages: messages };
+  }
+
+  function renderCalibrationSafety (overrides) {
+    const assessment = assessCalibrationSafety(overrides);
+    const label = assessment.status === 'blocked'
+      ? t('researchCalibrationSafetyBlocked')
+      : assessment.status === 'caution'
+        ? t('researchCalibrationSafetyCaution')
+        : t('researchCalibrationSafetySafe');
+    return '<div id="research-calibration-safety" class="research-calibration-safety ' +
+      assessment.status + '">' +
+        '<div class="research-calibration-safety-head">' +
+          '<strong>' + escapeHtml(t('researchCalibrationSafetyTitle')) + '</strong>' +
+          '<span>' + escapeHtml(label) + '</span>' +
+        '</div>' +
+        '<ul>' + assessment.messages.map(message =>
+          '<li class="' + escapeHtml(message.level) + '">' +
+            escapeHtml(message.text) + '</li>'
+        ).join('') + '</ul>' +
+      '</div>';
+  }
+
+  function buildResearchProtocolExport (overrides) {
+    const settings = researchProtocolSettings(overrides);
+    const source = adaptiveCandidateSource();
+    const rows = researchItemRows();
+    const summary = summarizeResearchItems(rows);
+    return {
+      schema: 'ljt-cat-protocol',
+      schema_version: 1,
+      exported_at: nowISO(),
+      app_version: APP_VERSION,
+      asset_cache_version: ASSET_CACHE_VERSION,
+      calibration_version: state.calibration ? (state.calibration.version || 'unknown') : '',
+      calibration_hash: state.calibrationHash || '',
+      calibration_locked: true,
+      item_pool_policy: 'locked_calibrated_full_pool',
+      item_pool: {
+        candidate_set: source.candidateSet || '',
+        form_id: source.form ? source.form.form_id : '',
+        n_items: summary.n,
+        n_hit: summary.hit,
+        n_cr: summary.cr,
+        unique_targets: summary.uniqueTargets
+      },
+      protocol: settings,
+      participant_url: buildProtocolURL(false, settings),
+      research_url: buildProtocolURL(true, settings),
+      calibration_safety: assessCalibrationSafety(settings)
+    };
+  }
+
+  function downloadTextFile (filename, text, mimeType) {
+    const blob = new Blob([text], { type: mimeType || 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function applyImportedResearchProtocol (payload) {
+    const protocol = payload && typeof payload === 'object'
+      ? (payload.protocol || payload.settings || payload)
+      : null;
+    if (!protocol || typeof protocol !== 'object') {
+      throw new Error('Invalid protocol JSON');
+    }
+    state.lang = normalizeLanguage(protocol.language || protocol.lang || state.lang);
+    state.labCode = protocol.lab_code || state.labCode || '';
+    updateURLFromProtocol(true, protocol);
+    parseURLParams();
+    applyLanguage();
+    renderResearchPanel();
+    setResearchStatus('researchProtocolImported');
+    logEvent('research_protocol_imported', {
+      protocol_profile: state.params.protocol_profile,
+      participant_url: participantProtocolURL()
+    });
   }
 
   function bindResearchPanelControls () {
@@ -2282,6 +2640,7 @@
     const fixationEl = $('research-fixation-ms');
     const postResponseEl = $('research-post-response-ms');
     const paceEl = $('research-pace-mode');
+    const reportEl = $('research-participant-report');
     const maxRunEl = $('research-max-condition-run');
     const maxFailsEl = $('research-max-play-fails');
     const thetaMinEl = $('research-theta-min');
@@ -2303,6 +2662,9 @@
     const quotaTolEl = $('research-quota-tol');
     const applyEl = $('research-apply-protocol');
     const copyEl = $('research-copy-url');
+    const exportEl = $('research-export-protocol');
+    const importEl = $('research-import-protocol');
+    const importFileEl = $('research-import-protocol-file');
     const urlEl = $('research-participant-url');
     const helpEl = $('research-timing-help');
     if (!timingEl || !presetEl || !customEl || !urlEl) return;
@@ -2319,6 +2681,7 @@
         fixation_ms: fixationEl ? fixationEl.value : fixationMs(),
         post_response_ms: postResponseEl ? postResponseEl.value : postResponseMs(),
         pace: paceEl ? paceEl.value : state.params.pace,
+        participant_report: reportEl ? reportEl.value : state.params.participant_report,
         max_condition_run: maxRunEl ? maxRunEl.value : maxConditionRun(),
         max_play_fails: maxFailsEl ? maxFailsEl.value : state.params.max_play_fails,
         theta_min: thetaMinEl ? thetaMinEl.value : state.params.theta_min,
@@ -2385,6 +2748,12 @@
       if (classroomTextEl) {
         classroomTextEl.value = buildResearchClassroomText(overrides);
       }
+      const safetyEl = $('research-calibration-safety');
+      if (safetyEl) {
+        const wrap = document.createElement('div');
+        wrap.innerHTML = renderCalibrationSafety(overrides);
+        safetyEl.replaceWith(wrap.firstChild);
+      }
       urlEl.value = buildProtocolURL(false, overrides);
     };
 
@@ -2417,7 +2786,7 @@
     presetEl.addEventListener('change', markCustomAndRefresh);
     customEl.addEventListener('input', markCustomAndRefresh);
     [
-      keymapEl, autoPlayEl, audioRateEl, fixationEl, postResponseEl, paceEl, maxRunEl, maxFailsEl,
+      keymapEl, autoPlayEl, audioRateEl, fixationEl, postResponseEl, paceEl, reportEl, maxRunEl, maxFailsEl,
       thetaMinEl, thetaMaxEl, thetaStepEl, theta2MinEl, theta2MaxEl, theta2StepEl,
       algorithmEl, stopRuleEl, minItemsEl, maxItemsEl, targetSeEl, stopPserEl,
       pserHypoEl, pserHyperEl, quotaTolEl
@@ -2449,6 +2818,7 @@
         state.params.post_response_ms = boundedNumberValue(
           overrides.post_response_ms, DEFAULTS.post_response_ms, 0, 5000, true);
         state.params.pace = normalizePace(overrides.pace);
+        state.params.participant_report = normalizeParticipantReport(overrides.participant_report);
         state.params.max_condition_run = boundedNumberValue(
           overrides.max_condition_run, DEFAULTS.max_condition_run, 1, 10, true);
         state.params.max_play_fails = boundedNumberValue(
@@ -2501,6 +2871,7 @@
           fixation_ms: fixationMs(),
           post_response_ms: postResponseMs(),
           pace: state.params.pace,
+          participant_report: state.params.participant_report,
           max_condition_run: maxConditionRun(),
           max_play_fails: state.params.max_play_fails,
           theta_min: state.params.theta_min,
@@ -2525,6 +2896,51 @@
         } catch (err) {
           setResearchStatus('researchCopyFailed', true);
         }
+      });
+    }
+
+    if (exportEl) {
+      exportEl.addEventListener('click', () => {
+        const payload = buildResearchProtocolExport(readOverrides());
+        const profile = payload.protocol.protocol_profile || 'custom';
+        const ts = nowISO().replace(/[:.]/g, '-').slice(0, 19);
+        downloadTextFile(
+          'LJT_protocol_' + profile + '_' + ts + '.json',
+          JSON.stringify(payload, null, 2),
+          'application/json;charset=utf-8'
+        );
+        setResearchStatus('researchProtocolExported');
+        logEvent('research_protocol_exported', {
+          protocol_profile: profile,
+          participant_url: payload.participant_url
+        });
+      });
+    }
+
+    if (importEl && importFileEl) {
+      importEl.addEventListener('click', () => importFileEl.click());
+      importFileEl.addEventListener('change', () => {
+        const file = importFileEl.files && importFileEl.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const payload = JSON.parse(String(reader.result || '{}'));
+            applyImportedResearchProtocol(payload);
+          } catch (err) {
+            setResearchStatus('researchProtocolImportFailed', true);
+            logEvent('research_protocol_import_error', {
+              error_message: err && err.message ? err.message : String(err || '')
+            });
+          } finally {
+            importFileEl.value = '';
+          }
+        };
+        reader.onerror = () => {
+          setResearchStatus('researchProtocolImportFailed', true);
+          importFileEl.value = '';
+        };
+        reader.readAsText(file);
       });
     }
 
@@ -2721,6 +3137,23 @@
         '</div>' +
         '<p class="research-references-note"><small>' + escapeHtml(t('researchReferenceReadmeLink')) + '</small></p>' +
       '</details>';
+    const panelHelpHtml =
+      '<div class="research-panel-help">' +
+        '<button type="button" class="research-panel-help-trigger" aria-label="' +
+          escapeHtml(t('researchPanelHelpLabel')) +
+          '" aria-describedby="research-panel-help-popover">?</button>' +
+        '<div id="research-panel-help-popover" class="research-panel-help-popover" role="tooltip">' +
+          '<strong>' + escapeHtml(t('researchPanelHelpTitle')) + '</strong>' +
+          '<dl>' +
+            '<dt>' + escapeHtml(t('researchPanelHelpResearcherTitle')) + '</dt>' +
+            '<dd>' + escapeHtml(t('researchPanelHelpResearcherBody')) + '</dd>' +
+            '<dt>' + escapeHtml(t('researchPanelHelpInstructorTitle')) + '</dt>' +
+            '<dd>' + escapeHtml(t('researchPanelHelpInstructorBody')) + '</dd>' +
+            '<dt>' + escapeHtml(t('researchPanelHelpAuditTitle')) + '</dt>' +
+            '<dd>' + escapeHtml(t('researchPanelHelpAuditBody')) + '</dd>' +
+          '</dl>' +
+        '</div>' +
+      '</div>';
     const protocolHtml =
       '<div class="research-protocol">' +
         '<h4>' + escapeHtml(t('researchProtocolTitle')) + '</h4>' +
@@ -2782,6 +3215,14 @@
               '<option value="self"' + (isSelfPaced() ? ' selected' : '') + '>' +
                 escapeHtml(t('researchPaceSelf')) + '</option>' +
             '</select></label>' +
+          '<label>' + researchLabel(t('researchParticipantReportLabel'), t('researchParticipantReportHelp')) +
+            '<select id="research-participant-report">' +
+              ['none', 'basic', 'educational'].map(value =>
+                '<option value="' + value + '"' +
+                  (normalizeParticipantReport(state.params.participant_report) === value ? ' selected' : '') +
+                  '>' + escapeHtml(participantReportLabel(value)) + '</option>'
+              ).join('') +
+            '</select></label>' +
           '<label><span>' + escapeHtml(t('researchMaxConditionRunLabel')) + '</span>' +
             '<input type="number" id="research-max-condition-run" min="1" max="10" step="1" value="' +
               escapeHtml(maxConditionRun()) + '" /></label>' +
@@ -2800,6 +3241,7 @@
         '</div>' +
         '<p id="research-profile-advice" class="research-profile-advice">' +
           escapeHtml(protocolProfileAdvice(protocolProfile)) + '</p>' +
+        renderCalibrationSafety() +
         adaptiveProtocolHtml +
         numericalSettingsHtml +
         referencesHtml +
@@ -2822,6 +3264,11 @@
             escapeHtml(t('researchApplyProtocol')) + '</button>' +
           '<button type="button" id="research-copy-url" class="secondary-btn">' +
             escapeHtml(t('researchCopyUrl')) + '</button>' +
+          '<button type="button" id="research-export-protocol" class="secondary-btn">' +
+            escapeHtml(t('researchExportProtocol')) + '</button>' +
+          '<button type="button" id="research-import-protocol" class="secondary-btn">' +
+            escapeHtml(t('researchImportProtocol')) + '</button>' +
+          '<input type="file" id="research-import-protocol-file" class="hidden" accept="application/json,.json" />' +
           '<span id="research-protocol-status" class="research-protocol-status" role="status" aria-live="polite"></span>' +
         '</div>' +
         '<div class="research-build-info" aria-label="' + escapeHtml(t('researchBuildInfoTitle')) + '">' +
@@ -2896,7 +3343,10 @@
     panel.classList.remove('hidden');
     panel.innerHTML =
       '<div class="research-panel-header">' +
-        '<h3>' + escapeHtml(t('researchTitle')) + '</h3>' +
+        '<div class="research-panel-heading">' +
+          '<h3>' + escapeHtml(t('researchTitle')) + '</h3>' +
+          panelHelpHtml +
+        '</div>' +
         '<p>' + escapeHtml(t('researchHiddenNote')) + '</p>' +
       '</div>' +
       protocolHtml +
@@ -2919,6 +3369,8 @@
           escapeHtml(state.params.max_play_fails) + '</strong></div>' +
         '<div><span>' + escapeHtml(t('researchKeymapLabel')) + '</span><strong>' +
           escapeHtml(normalizeKeymap(state.params.keymap)) + '</strong></div>' +
+        '<div><span>' + escapeHtml(t('researchParticipantReportLabel')) + '</span><strong>' +
+          escapeHtml(participantReportLabel(state.params.participant_report)) + '</strong></div>' +
         '<div><span>' + escapeHtml(t('researchForm')) + '</span><strong>' +
           escapeHtml(form ? form.form_id : '') + '</strong></div>' +
       '</div>' +
@@ -3805,6 +4257,123 @@
     return { estimate: clipped, se: se, raw: mean, range: [stat.min, stat.max] };
   }
 
+  function participantReportPrecisionKey (finalObj) {
+    const ses = [finalObj.se_hit, finalObj.se_cr].filter(Number.isFinite);
+    if (!ses.length) return 'resultReportPrecisionExploratory';
+    const maxSe = Math.max.apply(null, ses);
+    if (maxSe <= 0.65) return 'resultReportPrecisionHigh';
+    if (maxSe <= 0.85) return 'resultReportPrecisionModerate';
+    return 'resultReportPrecisionExploratory';
+  }
+
+  function participantReportBandKey (percentileValue) {
+    if (!Number.isFinite(percentileValue)) return 'resultReportBandMiddle';
+    if (percentileValue < 20) return 'resultReportBandDeveloping';
+    if (percentileValue < 40) return 'resultReportBandLowerMiddle';
+    if (percentileValue < 60) return 'resultReportBandMiddle';
+    if (percentileValue < 80) return 'resultReportBandUpperMiddle';
+    return 'resultReportBandHigh';
+  }
+
+  function participantReportQualityKey (finalObj) {
+    const caution =
+      !!finalObj.response_pattern_theta_gap_flag ||
+      !!finalObj.uniform_yes_flag ||
+      !!finalObj.uniform_no_flag ||
+      (Number.isFinite(finalObj.timeout_rate) && finalObj.timeout_rate > 0.20) ||
+      (Number.isFinite(finalObj.too_fast_response_rate) && finalObj.too_fast_response_rate > 0.10) ||
+      (Number.isFinite(finalObj.mouse_response_rate) && finalObj.mouse_response_rate > 0.20) ||
+      Number(finalObj.focus_loss_count || 0) > 0;
+    return caution ? 'resultReportQualityCheck' : 'resultReportQualityGood';
+  }
+
+  function participantReportRange (finalObj) {
+    const estimate = Number(finalObj.toeic_estimate);
+    const se = Number(finalObj.toeic_estimate_se);
+    if (!Number.isFinite(estimate) || !Number.isFinite(se)) return null;
+    const low = Math.max(0, estimate - 1.96 * se);
+    const high = Math.min(100, estimate + 1.96 * se);
+    return {
+      low: Number.isFinite(low) ? round2(low) : null,
+      high: Number.isFinite(high) ? round2(high) : null
+    };
+  }
+
+  function resultReportRowHtml (labelKey, value) {
+    return '<div class="result-item">' +
+      '<span class="result-label">' + escapeHtml(t(labelKey)) + '</span>' +
+      '<strong class="result-value">' + escapeHtml(value) + '</strong>' +
+    '</div>';
+  }
+
+  function renderParticipantScoreReport (finalObj) {
+    const el = $('participant-score-report');
+    if (!el) return;
+    const mode = normalizeParticipantReport(state.params.participant_report);
+    if (mode === 'none') {
+      el.classList.add('hidden');
+      el.innerHTML = '';
+      return;
+    }
+    el.className = 'result-box participant-score-report';
+    if (!finalObj.valid_for_reporting) {
+      el.innerHTML =
+        '<h3>' + escapeHtml(t('resultReportInvalidTitle')) + '</h3>' +
+        '<p class="result-note">' + escapeHtml(t('resultReportInvalidBody')) + '</p>';
+      logEvent('participant_report_rendered', {
+        participant_report: mode,
+        valid_for_reporting: false,
+        scoring_status: finalObj.scoring_status
+      });
+      return;
+    }
+    const estimate = Number.isFinite(finalObj.toeic_estimate)
+      ? Number(finalObj.toeic_estimate).toFixed(1)
+      : '';
+    const range = participantReportRange(finalObj);
+    const rangeText = range && range.low !== null && range.high !== null
+      ? t('resultReportRangeValue', { low: range.low, high: range.high })
+      : '';
+    const pctText = Number.isFinite(finalObj.percentile)
+      ? t('resultReportPercentileValue', { percentile: finalObj.percentile })
+      : '';
+    const rows = [
+      resultReportRowHtml('resultReportToeicLabel', estimate),
+      resultReportRowHtml('resultReportRangeLabel', rangeText),
+      resultReportRowHtml('resultReportPercentileLabel', pctText),
+      resultReportRowHtml('resultReportItemsLabel', t('resultReportItemsValue', {
+        answered: finalObj.n_answered_items,
+        administered: finalObj.n_items
+      }))
+    ];
+    if (mode === 'educational') {
+      rows.push(
+        resultReportRowHtml('resultReportPrecisionLabel', t(participantReportPrecisionKey(finalObj))),
+        resultReportRowHtml('resultReportBalanceLabel', t('resultReportBalanceValue', {
+          hit: finalObj.n_hit_answered,
+          cr: finalObj.n_cr_answered
+        })),
+        resultReportRowHtml('resultReportQualityLabel', t(participantReportQualityKey(finalObj))),
+        resultReportRowHtml('resultReportBandLabel', t(participantReportBandKey(finalObj.percentile)))
+      );
+    }
+    el.innerHTML =
+      '<h3>' + escapeHtml(t('resultReportTitle')) + '</h3>' +
+      '<div class="result-report-grid">' + rows.join('') + '</div>' +
+      (mode === 'educational'
+        ? '<div class="result-learning-note"><strong>' +
+            escapeHtml(t('resultReportNextFocusLabel')) + '</strong><p>' +
+            escapeHtml(t('resultReportNextFocus')) + '</p></div>'
+        : '') +
+      '<p class="result-note">' + escapeHtml(t('resultReportCaution')) + '</p>';
+    logEvent('participant_report_rendered', {
+      participant_report: mode,
+      valid_for_reporting: true,
+      percentile: finalObj.percentile,
+      toeic_estimate: finalObj.toeic_estimate
+    });
+  }
+
   function buildProtocolManifest () {
     const adaptiveSource = state.delivery === 'adaptive' ? adaptiveCandidateSource() : null;
     const adaptiveForm = adaptiveSource ? adaptiveSource.form : null;
@@ -3870,7 +4439,8 @@
         practice_feedback_visible: true,
         main_feedback_visible: false,
         targetword_spelling_visible_to_participant: false,
-        participant_score_visible: false
+        participant_report: normalizeParticipantReport(state.params.participant_report),
+        participant_score_visible: normalizeParticipantReport(state.params.participant_report) !== 'none'
       },
       adaptive: {
         algorithm: state.delivery === 'adaptive' ? state.algorithm : '',
@@ -4250,6 +4820,8 @@
     state.session.pace = state.params.pace;
     state.session.self_paced = isSelfPaced();
     state.session.advance_key = isSelfPaced() ? 'Space' : '';
+    state.session.participant_report = normalizeParticipantReport(state.params.participant_report);
+    state.session.participant_score_visible = state.session.participant_report !== 'none';
     state.session.theta_min = state.params.theta_min;
     state.session.theta_max = state.params.theta_max;
     state.session.theta_step = state.params.theta_step;
@@ -4302,6 +4874,7 @@
     // against latent ability θ directly. Label it so the user understands
     // what the percentile actually represents.
     showStage('stage-result');
+    renderParticipantScoreReport(finalObj);
 
     // Build Excel payload
     const safeId = (state.participant.id || 'na')

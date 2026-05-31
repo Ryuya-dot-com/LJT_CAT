@@ -130,6 +130,7 @@
     'correct', 'timed_out', 'skipped', 'flagged_nt',
     'valid_for_reporting', 'research_mode', 'self_paced',
     'auto_play_audio', 'practice_completed',
+    'participant_score_visible',
     'uniform_yes_flag', 'uniform_no_flag', 'all_yes_flag', 'all_no_flag',
     'response_pattern_theta_gap_flag', 'aberrance_theta_gap_flag',
     'reached_precision'
@@ -563,6 +564,8 @@
         lab_code:             payload.session.lab_code || '',
         language:             payload.session.language || '',
         research_mode:        !!payload.session.research_mode,
+        participant_report:    payload.session.participant_report || '',
+        participant_score_visible: !!payload.session.participant_score_visible,
         started_at:           payload.session.started_at,
         finished_at:          payload.session.finished_at,
         elapsed_ms:           payload.session.elapsed_ms,
@@ -735,6 +738,9 @@
         { key: 'target_se',           value: payload.session.target_se },
         { key: 'language',            value: payload.session.language || '' },
         { key: 'research_mode',       value: !!payload.session.research_mode },
+        { key: 'participant_report',  value: payload.session.participant_report || '' },
+        { key: 'participant_score_visible',
+          value: !!payload.session.participant_score_visible },
         { key: 'theta_grid',
           value: payload.session.mode === '1F'
             ? thetaGridLabel

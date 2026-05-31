@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Researcher-configurable participant score report levels
+  (`participant_report=none|basic|educational`). Reports are disabled by
+  default and never expose item-level answers, target words, or item
+  parameters.
+- Researcher panel calibration-safe checks and protocol JSON export/import for
+  sharing administration settings without changing the calibrated item pool.
 - Methodological references section in README and researcher panel
   (Bock & Mislevy, 1982; Choi et al., 2011; Morris et al., 2020;
   Babcock & Weiss, 2009; van der Linden & Glas, 2010; Wainer et al., 2000;
@@ -114,6 +120,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- Reworked the README onboarding flow with a 3-minute start guide, protocol
+  choice table, calibration-safe change guide, common URL recipes, glossary,
+  participant-report explanation, workbook first-check guide, and reporting
+  checklist.
 - Added `LICENSE` (MIT) covering all source code.
 - Added `LICENSE-MATERIALS.md` (CC BY-NC 4.0) covering the audio
   stimuli and IRT calibration JSON files. The two-license arrangement

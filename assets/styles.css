@@ -170,6 +170,73 @@ h3 {
   margin: 0 0 4px;
   font-size: 17px;
 }
+.research-panel-heading {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.research-panel-help {
+  position: relative;
+  flex: 0 0 auto;
+}
+.research-panel-help-trigger {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #93c5fd;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--color-primary-dark);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
+}
+.research-panel-help-trigger:hover,
+.research-panel-help-trigger:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+  outline: none;
+}
+.research-panel-help-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 10;
+  display: none;
+  width: min(360px, calc(100vw - 64px));
+  padding: 12px 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.research-panel-help:hover .research-panel-help-popover,
+.research-panel-help:focus-within .research-panel-help-popover {
+  display: block;
+}
+.research-panel-help-popover strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.research-panel-help-popover dl {
+  margin: 0;
+}
+.research-panel-help-popover dt {
+  margin: 8px 0 2px;
+  font-weight: 800;
+  color: var(--color-primary-dark);
+}
+.research-panel-help-popover dd {
+  margin: 0;
+  color: var(--color-neutral);
+}
 .research-panel-header p,
 .research-model {
   margin: 6px 0 12px;
@@ -284,6 +351,58 @@ h3 {
   color: #1e3a8a;
   font-size: 13px;
   line-height: 1.45;
+}
+.research-calibration-safety {
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.research-calibration-safety.safe {
+  border-left-color: #15803d;
+}
+.research-calibration-safety.caution {
+  border-left-color: #b45309;
+}
+.research-calibration-safety.blocked {
+  border-left-color: #b91c1c;
+}
+.research-calibration-safety-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.research-calibration-safety-head strong {
+  font-size: 13px;
+}
+.research-calibration-safety-head span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: var(--color-primary-dark);
+  font-size: 11px;
+  font-weight: 800;
+}
+.research-calibration-safety.caution .research-calibration-safety-head span {
+  background: #fef3c7;
+  color: #92400e;
+}
+.research-calibration-safety.blocked .research-calibration-safety-head span {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.research-calibration-safety ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.research-calibration-safety li {
+  margin: 3px 0;
 }
 .research-methods-grid {
   display: grid;
@@ -596,6 +715,40 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
 .result-label { color: var(--color-neutral); }
 .result-value { font-weight: 700; font-size: 20px; color: var(--color-primary-dark); }
 .result-note { font-size: 13px; color: var(--color-muted); margin-top: 12px; }
+.participant-score-report {
+  text-align: left;
+}
+.participant-score-report h3 {
+  margin: 0 0 14px;
+  color: var(--color-primary-dark);
+  font-size: 20px;
+}
+.result-report-grid {
+  display: grid;
+  gap: 0;
+}
+.participant-score-report .result-item {
+  gap: 16px;
+  align-items: baseline;
+}
+.participant-score-report .result-value {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.result-learning-note {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #dbeafe;
+}
+.result-learning-note strong {
+  color: var(--color-primary-dark);
+}
+.result-learning-note p {
+  margin: 6px 0 0;
+  color: var(--color-neutral);
+  font-size: 14px;
+  line-height: 1.6;
+}
 
 .download-status {
   padding: 12px 16px;
@@ -740,6 +893,13 @@ footer a:hover { text-decoration: underline; }
   .response-btn {
     width: 100%;
     flex-basis: auto;
+  }
+  .participant-score-report .result-item {
+    display: grid;
+    gap: 4px;
+  }
+  .participant-score-report .result-value {
+    font-size: 18px;
   }
 }
 

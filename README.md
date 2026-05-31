@@ -16,6 +16,41 @@
 - 項目・正答・項目パラメータは静的ファイルに含まれるため、項目秘匿が必要な
   high-stakes 評価には適しません。
 
+## 日本語クイックガイド
+
+初めて使う場合は、まず以下だけ押さえてください。
+
+| 立場 | 開くURL | 用途 |
+|---|---|---|
+| 受験者 | `/adaptive/` | テストを受ける |
+| 研究者・教員 | `/adaptive/?research=1` | 参加者用URLを作成し、実施条件を確認する |
+
+基本手順:
+
+1. 研究者パネルを開く:
+   `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?research=1`
+2. **Research-use protocol profile** を選ぶ。
+3. 自動生成された **Participant URL** だけを参加者に配布する。
+4. 参加者が終了時にダウンロードする `.xlsx` を回収する。
+5. 分析前に `summary`, `quality_flags`, `protocol_manifest` を確認する。
+
+迷った場合の推奨:
+
+- 通常の研究用途: `balanced_default`
+- 授業・短時間スクリーニング: `short_screening`
+- 妥当性検証・個人差研究: `precision_validation`
+- 受験者にスコアを見せない: `participant_report=none` (既定)
+- 受験者に簡易レポートを見せる: `participant_report=basic`
+- 学習コメントも返す: `participant_report=educational`
+
+キャリブレーションを壊さない原則:
+
+- 項目プール、正答、targetword、音声対応、IRTパラメータは変更しない。
+- 変更してよいのは、基本的に実施条件、停止則、項目数範囲、表示言語、
+  受験者レポートの有無です。
+- Custom設定を使う場合は、同一研究内で混在させず、Excelの
+  `metadata` と `protocol_manifest` から全設定を報告してください。
+
 English documentation follows.
 
 ---
@@ -36,6 +71,126 @@ Live site:
 Methodologically grounded in Bock & Mislevy (1982), Choi et al. (2011),
 Morris et al. (2020) - see
 [Methodological References](#方法論的参考文献--methodological-references).
+
+---
+
+## Start Here: 3-Minute Guide
+
+Most users only need two pages:
+
+| Role | Open this | Use it for |
+|---|---|---|
+| Participants | `/adaptive/` | Taking the test |
+| Researchers / teachers | `/adaptive/?research=1` | Preparing the participant URL and checking the protocol |
+
+Recommended first setup:
+
+1. Open the researcher panel:
+   `https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?research=1`
+2. Choose a **Research-use protocol profile**.
+3. Keep the generated **Participant URL** and distribute only that URL.
+4. After testing, collect the downloaded `.xlsx` files.
+5. Before analysis, inspect `summary`, `quality_flags`, and
+   `protocol_manifest` in the workbook.
+
+For most research use, start with:
+
+```text
+https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?research=1&protocol_profile=balanced_default
+```
+
+For most classroom or low-stakes data collection, use the same researcher panel
+but consider the **Short / Screening** profile if time is limited.
+
+---
+
+## Which Protocol Should I Choose?
+
+| Goal | Recommended profile | Typical length | Use this when |
+|---|---|---:|---|
+| Short classroom screening | `short_screening` | 20-50 items | You need a shorter session and mainly want group-level information |
+| General research default | `balanced_default` | 30-50 items | You want a defensible default for correlations, regressions, or group comparisons |
+| Validation / individual differences | `precision_validation` | 30-60 items | You care more about precision and comparability than saving time |
+| Custom protocol | `custom` | researcher-defined | You have a specific design reason and will report all settings |
+
+Rule of thumb:
+
+- Use `balanced_default` unless you have a clear reason not to.
+- Use `untimed&pace=self` when the target construct is listening-based
+  lexical-semantic judgment rather than speed.
+- Treat timed administration as a separate condition because it also reflects
+  processing speed, attention, and strategy.
+- Do not mix protocol profiles within the same study arm unless that is part of
+  the design.
+
+---
+
+## What Is Calibration-Safe to Change?
+
+The calibrated item pool and IRT parameters are fixed in `data/calibration.json`.
+The researcher panel is designed so that ordinary protocol changes do **not**
+edit those calibrated parameters.
+
+Generally safe to change:
+
+- Language: `lang=ja|en`
+- Timing mode and response window
+- Auto-play, audio rate, fixation time, post-response delay
+- Auto-paced vs self-paced progression
+- F/J key mapping
+- Minimum and maximum CAT length
+- Stopping-rule thresholds
+- Participant score-report visibility
+- Lab code and protocol profile
+
+Use extra caution:
+
+- Changing audio speed creates a different listening condition.
+- Timed and untimed data should not be pooled without reporting that condition.
+- Very short minimum or maximum lengths can reduce individual-score stability.
+- Changing EAP grid settings is mainly for numerical sensitivity checks.
+
+Not calibration-safe without new analysis:
+
+- Removing or replacing items from the calibrated bank.
+- Editing correct answers, target words, audio mappings, or item parameters.
+- Treating a custom item subset as equivalent to the full calibrated CAT.
+
+---
+
+## Common URL Recipes
+
+| Purpose | URL pattern |
+|---|---|
+| Default participant test | `/adaptive/` |
+| Japanese participant UI | `/adaptive/?lang=ja` |
+| English participant UI | `/adaptive/?lang=en` |
+| Researcher panel | `/adaptive/?research=1` |
+| Recommended research setup | `/adaptive/?research=1&protocol_profile=balanced_default` |
+| Short classroom screening | `/adaptive/?research=1&protocol_profile=short_screening` |
+| Precision validation | `/adaptive/?research=1&protocol_profile=precision_validation` |
+| Show a basic participant report | `/adaptive/?participant_report=basic` |
+| Show an educational participant report | `/adaptive/?participant_report=educational` |
+| Add a site or study-arm code | `/adaptive/?lab=YOUR_LAB_CODE` |
+
+In practice, researchers should usually create the final URL from the
+researcher panel rather than hand-writing a long URL.
+
+---
+
+## Key Terms
+
+| Term | Meaning |
+|---|---|
+| LJT | Lexicosemantic Judgement Task; participants judge whether a heard word fits the sentence context |
+| CAT | Computerized adaptive test; the next item is selected based on earlier responses |
+| Hit | An item where the heard word is semantically appropriate in context |
+| CR | An item where the heard word is semantically inappropriate in context |
+| theta | IRT ability estimate; exported separately as `theta_hit` and `theta_cr` |
+| SE | Standard error of theta; lower values indicate higher measurement precision |
+| PSER | Predicted standard error reduction; a stopping rule based on expected precision gain from another item |
+| protocol profile | A preset bundle of timing, stopping-rule, and length settings |
+| participant report | Optional final-screen score summary; disabled by default |
 
 ---
 
@@ -87,8 +242,37 @@ Participant-facing design choices:
 - Responses are made with `F` / `J` according to the displayed mapping.
 - Practice trials show feedback; main-test trials do not.
 - Main-test scores, theta estimates, item parameters, and TOEIC estimates are
-  not shown to the participant.
-- The final screen displays the saved filename only.
+  not shown during the main test.
+- The final screen displays the saved filename. Researchers may optionally
+  enable a participant-facing score report with
+  `participant_report=basic` or `participant_report=educational`.
+  The default is `participant_report=none`.
+- Participant score reports never show item-level answers, item parameters, or
+  target words. They show only calibrated summary estimates, uncertainty, and
+  quality cautions.
+
+---
+
+## Participant Score Reports
+
+Participant score reports are controlled by the researcher. They are disabled
+by default because some studies should avoid showing scores immediately.
+
+| Setting | Participant sees | Best use |
+|---|---|---|
+| `participant_report=none` | Completion message and saved filename only | Research studies where feedback should be withheld |
+| `participant_report=basic` | TOEIC-derived estimate, uncertainty range, reference percentile, valid-response count | Low-stakes feedback where a short summary is enough |
+| `participant_report=educational` | Basic report plus precision, Hit/CR balance, quality note, relative band, learning-focus comment | Classroom or learning-oriented administration |
+
+Important interpretation rules:
+
+- The report is a **research estimate**, not an official TOEIC score.
+- The uncertainty range should be interpreted together with the point estimate.
+- If `valid_for_reporting=false`, no participant score is shown.
+- The participant report never exposes item-level answers, target words, item
+  parameters, or the response log.
+- The same report setting is written to `summary`, `metadata`, and
+  `protocol_manifest` in the downloaded workbook.
 
 ---
 
@@ -341,6 +525,9 @@ The panel displays:
 - Generated participant URL.
 - Research-use protocol profile selector.
 - Generated Methods text and instructor/administrator text.
+- Calibration-safe setting check.
+- Optional participant score report level.
+- Protocol JSON export/import for sharing and replication.
 
 Researchers can configure:
 
@@ -352,6 +539,7 @@ Researchers can configure:
 - Fixation duration.
 - Post-response delay.
 - Auto-paced or self-paced progression.
+- Participant score report level (`none`, `basic`, or `educational`).
 - Maximum same-condition run length.
 - Audio failure threshold.
 - `F` / `J` key mapping.
@@ -398,6 +586,9 @@ strategy. Custom protocols are allowed, but `min_items`, `max_items`,
 The researcher panel exposes these profiles in a selector. Selecting a profile
 updates the CAT parameters and regenerates both the participant URL and short
 text blocks for Methods sections and classroom/administrator instructions.
+The panel also exports/imports a protocol JSON file so collaborators can reuse
+the same administration settings without changing the calibrated item pool or
+IRT parameters.
 
 ---
 
@@ -415,6 +606,21 @@ text blocks for Methods sections and classroom/administrator instructions.
 For multi-site studies, use `lab=<lab_code>` so filenames and metadata can be
 grouped by site or study arm.
 
+### Reporting checklist for papers and preregistrations
+
+When reporting a study that used LJT-CAT, include at least:
+
+- Public URL or repository commit used for administration.
+- `app_version`, `asset_cache_version`, and `calibration_hash`.
+- Protocol profile or all custom URL parameters.
+- Timing condition (`timed`/`untimed`) and response window if timed.
+- CAT algorithm and stopping rule.
+- Minimum and maximum item counts.
+- Whether participant score reports were shown.
+- Criteria used to exclude or flag sessions from `quality_flags`.
+- Primary score columns used in analysis, usually `theta_hit`, `theta_cr`, and
+  `toeic_estimate`.
+
 ---
 
 ## Output Workbook
@@ -426,6 +632,15 @@ LJT_result_{participant_id}_{YYYY-MM-DDTHH-MM-SS}.xlsx
 ```
 
 If Excel export fails in the browser, the same payload is downloaded as JSON.
+
+If you are opening the workbook for the first time, start with these sheets:
+
+| First check | Sheet | What to look for |
+|---|---|---|
+| Was the session reportable? | `summary` | `valid_for_reporting`, `scoring_status`, `n_hit_answered`, `n_cr_answered` |
+| Were there administration problems? | `quality_flags` | timeout, focus loss, audio failure, response-pattern warnings |
+| Which protocol was actually used? | `protocol_manifest` | profile, timing, stopping rule, item limits, participant report setting |
+| What did the participant do on each trial? | `responses` | response, correctness, RT, timeout status, item condition |
 
 Workbook sheets:
 
@@ -742,7 +957,7 @@ publishing or reporting analyses based on this tool, we recommend
 including the following fields from the Excel `metadata` sheet:
 
 - `app_version` - the LJT-CAT Web release version (semantic version,
-  e.g. `2.8.2`).
+  e.g. `2.8.3`).
 - `asset_cache_version` - the static-asset cache key used by the
   deployment, which pins the JavaScript, CSS, and audio bundle.
 - `calibration_hash` - a content hash of `data/calibration.json` at
