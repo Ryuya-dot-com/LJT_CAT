@@ -39,6 +39,8 @@
 - 通常の研究用途: `balanced_default`
 - 授業・短時間スクリーニング: `short_screening`
 - 妥当性検証・個人差研究: `precision_validation`
+- 研究用途の標準ペース: Timed + 自動進行
+- 授業・教育用途の標準ペース: Untimed + Spaceキー進行
 - 受験者にスコアを見せない: `participant_report=none` (既定)
 - 受験者に簡易レポートを見せる: `participant_report=basic`
 - 学習コメントも返す: `participant_report=educational`
@@ -116,8 +118,9 @@ but consider the **Short / Screening** profile if time is limited.
 Rule of thumb:
 
 - Use `balanced_default` unless you have a clear reason not to.
-- Use `untimed&pace=self` when the target construct is listening-based
-  lexical-semantic judgment rather than speed.
+- Use timed auto-advance for controlled research administration.
+- Use `untimed&pace=self` for classroom, instructional, or low-stakes
+  administration where burden and accessibility matter more than RT control.
 - Treat timed administration as a separate condition because it also reflects
   processing speed, attention, and strategy.
 - Do not mix protocol profiles within the same study arm unless that is part of
@@ -292,8 +295,8 @@ Default timing:
 |---|---:|
 | Fixation | 500 ms |
 | Audio playback | Once, at 1.0x speed |
-| Timed response window | 1250 ms after audio offset |
-| Post-response delay | 350 ms |
+| Timed response window | Hit/appropriate: 1600 ms; CR/inappropriate: 2000 ms after audio offset |
+| Post-response delay | 2000 ms |
 | Practice trials | 4 |
 
 In untimed mode, participants can respond without a response-window timeout.
@@ -321,11 +324,14 @@ Implementation details (for methods sections):
   for cross-reference, but RT itself is computed entirely in the
   high-resolution monotonic domain.
 
-In timed mode, the response window starts at the same zero point and
-expires after `response_window_ms` (default 1250 ms). When the window
-expires, the trial is closed with `timed_out: true`, `response: null`,
-and `rt_ms` ≈ `response_window_ms` (within the browser's `setTimeout`
-scheduling jitter, typically a few milliseconds).
+In timed mode, the response window starts at the same zero point. The default
+condition-specific windows are `response_window_ms_hit=1600` for Hit /
+appropriate items and `response_window_ms_cr=2000` for CR / inappropriate
+items. A legacy single `response_window_ms` parameter is still accepted; when
+used, it applies the same deadline to both conditions. When the window expires,
+the trial is closed with `timed_out: true`, `response: null`, and `rt_ms` ≈ the
+item's active response window (within the browser's `setTimeout` scheduling
+jitter, typically a few milliseconds).
 
 Audio onset and audio duration are also logged (`audio_play_start`,
 `audio_play_end`, `audio_duration_ms`) so that any analysis requiring
@@ -447,12 +453,14 @@ https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=max_items&max_items=
 | `lang` | `ja` | UI language: `ja` or `en` |
 | `lab` | empty | Lab code written to filename and metadata |
 | `timing` | `timed` | `timed` or `untimed` |
-| `response_window_ms` | `1250` | Response window after audio offset in timed mode |
+| `response_window_ms_hit` | `1600` | Hit / appropriate response window after audio offset in timed mode |
+| `response_window_ms_cr` | `2000` | CR / inappropriate response window after audio offset in timed mode |
+| `response_window_ms` | unset | Backward-compatible single response window; if set without condition-specific windows, it applies to both Hit and CR |
 | `keymap` | `counterbalanced` | `counterbalanced`, `f_appropriate`, or `j_appropriate` |
 | `auto_play_audio` | `1` | Whether audio starts automatically |
 | `audio_rate` | `1.0` | Audio playback rate |
 | `fixation_ms` | `500` | Fixation duration before audio playback |
-| `post_response_ms` | `350` | Delay before the next item in auto-paced mode |
+| `post_response_ms` | `2000` | Delay before the next item in auto-paced mode |
 | `pace` | `auto` | `auto` or `self` |
 | `self_paced` | unset | Backward-compatible alias for `pace=self` when set to `1` |
 | `max_condition_run` | `2` | Maximum consecutive items from the same condition |
@@ -492,9 +500,10 @@ https://ryuya-dot-com.github.io/LJT_CAT/adaptive/
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?lang=en
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?lab=YOUR_LAB_CODE
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?timing=untimed&pace=self
+https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?timing=timed&response_window_ms_hit=1600&response_window_ms_cr=2000&pace=auto
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?max_items=80
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?protocol_profile=balanced_default&research=1
-https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=morris_pser&min_items=30&max_items=60&target_se=0.60&pser_hypo=0.005&pser_hyper=inf&timing=untimed&pace=self
+https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=morris_pser&min_items=30&max_items=60&target_se=0.60&pser_hypo=0.005&pser_hyper=inf&timing=timed&response_window_ms_hit=1600&response_window_ms_cr=2000&pace=auto
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?stop_rule=se&target_se=0.30
 https://ryuya-dot-com.github.io/LJT_CAT/adaptive/?nt_threshold_ms=500
 ```
@@ -572,16 +581,17 @@ has a documented reason to customize the protocol.
 | Profile | Typical use | Suggested URL parameters | Interpretation |
 |---|---|---|---|
 | Short / Screening | Large surveys, classroom administration, group-level screening | `protocol_profile=short_screening&stop_rule=morris_pser&min_items=20&max_items=50&target_se=0.70&pser_hypo=0.005&pser_hyper=0.00835&timing=untimed&pace=self` | Efficient, but avoid strong individual-level interpretation |
-| Balanced / Default | General research, group comparisons, correlation/regression | `protocol_profile=balanced_default&stop_rule=morris_pser&min_items=30&max_items=50&target_se=0.64&pser_hypo=0.005&pser_hyper=inf&timing=untimed&pace=self` | Recommended default for most research use |
-| Precision / Validation | Validation, criterion-related studies, individual-difference research | `protocol_profile=precision_validation&stop_rule=morris_pser&min_items=30&max_items=60&target_se=0.60&pser_hypo=0.005&pser_hyper=inf&timing=untimed&pace=self` | More conservative; prioritizes precision over time saving |
+| Balanced / Default | General research, group comparisons, correlation/regression | `protocol_profile=balanced_default&stop_rule=morris_pser&min_items=30&max_items=50&target_se=0.64&pser_hypo=0.005&pser_hyper=inf&timing=timed&response_window_ms_hit=1600&response_window_ms_cr=2000&pace=auto` | Recommended default for most research use |
+| Precision / Validation | Validation, criterion-related studies, individual-difference research | `protocol_profile=precision_validation&stop_rule=morris_pser&min_items=30&max_items=60&target_se=0.60&pser_hypo=0.005&pser_hyper=inf&timing=timed&response_window_ms_hit=1600&response_window_ms_cr=2000&pace=auto` | More conservative; prioritizes precision over time saving |
 
-`timing=untimed&pace=self` is the safest default when the construct of
-interest is listening judgment ability. Timed administration is supported with
-`timing=timed&response_window_ms=1250`, but it should be treated as a distinct
-condition because it also reflects processing speed, attention, and test-taking
-strategy. Custom protocols are allowed, but `min_items`, `max_items`,
-`stop_rule`, `target_se`, `pser_hypo`, `pser_hyper`, `timing`, and
-`response_window_ms` must be reported from the workbook metadata.
+For controlled research, the current default is `timing=timed&pace=auto` with
+condition-specific windows (`response_window_ms_hit=1600`,
+`response_window_ms_cr=2000`) and `post_response_ms=2000`. For classroom or
+instructional use, `timing=untimed&pace=self` is preferred so that participants
+advance with Space or the on-screen button. Custom protocols are allowed, but
+`min_items`, `max_items`, `stop_rule`, `target_se`, `pser_hypo`, `pser_hyper`,
+`timing`, `pace`, `post_response_ms`, `response_window_ms_hit`, and
+`response_window_ms_cr` must be reported from the workbook metadata.
 
 The researcher panel exposes these profiles in a selector. Selecting a profile
 updates the CAT parameters and regenerates both the participant URL and short
@@ -613,7 +623,8 @@ When reporting a study that used LJT-CAT, include at least:
 - Public URL or repository commit used for administration.
 - `app_version`, `asset_cache_version`, and `calibration_hash`.
 - Protocol profile or all custom URL parameters.
-- Timing condition (`timed`/`untimed`) and response window if timed.
+- Timing condition (`timed`/`untimed`), progression mode (`auto`/`self`),
+  post-response delay, and condition-specific response windows if timed.
 - CAT algorithm and stopping rule.
 - Minimum and maximum item counts.
 - Whether participant score reports were shown.

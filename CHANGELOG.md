@@ -89,6 +89,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Default timed protocol now uses condition-specific response windows:
+  Hit / appropriate = 1600 ms and CR / inappropriate = 2000 ms. The legacy
+  `response_window_ms` URL parameter remains supported as a same-window
+  fallback, while the researcher panel and protocol metadata now expose
+  `response_window_ms_hit` and `response_window_ms_cr`.
+- Research-use profiles (`balanced_default`, `precision_validation`) now
+  default to Timed + auto-advance. The short classroom/screening profile
+  remains Untimed + Space-key self-paced.
+- Default auto-paced post-response delay changed from 350 ms to 2000 ms.
 - `cat_2f.js` header docstring corrected: item selection criterion is
   **A-optimality** (trace of Fisher info matrix), not D-optimality -
   the determinant collapses to zero for confirmatory 2PL items
@@ -109,6 +118,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Researcher-panel help icons now use visible custom tooltips and the top-right
+  help popover can be opened by hover, focus, or click.
 - `adaptive/index.html` was missing the `<script>` tag for
   `js/cat_session_storage.js`, which would have made the new
   crash-recovery and session-snapshot features non-functional in the

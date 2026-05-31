@@ -7,8 +7,8 @@
  *                 adaptive/: ?target_se=0.30 &min_items=0 &max_items=160
  *                 ?max_play_fails=3 (audio failure skip threshold)
  *                 ?keymap=counterbalanced|f_appropriate|j_appropriate
- *                 ?timing=timed|untimed &response_window_ms=1250
- *                 ?auto_play_audio=1|0 &audio_rate=1 &fixation_ms=500 &post_response_ms=350 &max_condition_run=2
+ *                 ?timing=timed|untimed &response_window_ms_hit=1600 &response_window_ms_cr=2000
+ *                 ?auto_play_audio=1|0 &audio_rate=1 &fixation_ms=500 &post_response_ms=2000 &max_condition_run=2
  *                 ?participant_report=none|basic|educational
  *                 ?lang=ja|en
  *                 ?research=1 (show calibration / item-bank audit panel)
@@ -22,8 +22,8 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '2.8.3';
-  const ASSET_CACHE_VERSION = '20260531d';
+  const APP_VERSION = '2.8.4';
+  const ASSET_CACHE_VERSION = '20260531f';
   const UX_INSTRUCTION_VERSION = 'practice_instructions_20260428_refined';
   // Captured at script-eval time so it can be reported as `code_loaded_at`
   // build/repro metadata in the Excel output (alongside session save time).
@@ -46,12 +46,14 @@
     pser_hyper: Infinity,
     quota_tol: 0.20,
     timing: 'timed',
-    response_window_ms: 1250,
+    response_window_ms: 1600,
+    response_window_ms_hit: 1600,
+    response_window_ms_cr: 2000,
     lang: 'ja',
     auto_play_audio: true,
     audio_rate: 1.0,
     fixation_ms: 500,
-    post_response_ms: 350,
+    post_response_ms: 2000,
     pace: 'auto',
     participant_report: 'none',
     max_condition_run: 2,
@@ -80,7 +82,8 @@
       pser_hypo: 0.005,
       pser_hyper: 0.00835,
       timing: 'untimed',
-      pace: 'self'
+      pace: 'self',
+      post_response_ms: 2000
     },
     balanced_default: {
       id: 'balanced_default',
@@ -91,8 +94,11 @@
       target_se: 0.64,
       pser_hypo: 0.005,
       pser_hyper: Infinity,
-      timing: 'untimed',
-      pace: 'self'
+      timing: 'timed',
+      pace: 'auto',
+      response_window_ms_hit: 1600,
+      response_window_ms_cr: 2000,
+      post_response_ms: 2000
     },
     precision_validation: {
       id: 'precision_validation',
@@ -103,8 +109,11 @@
       target_se: 0.60,
       pser_hypo: 0.005,
       pser_hyper: Infinity,
-      timing: 'untimed',
-      pace: 'self'
+      timing: 'timed',
+      pace: 'auto',
+      response_window_ms_hit: 1600,
+      response_window_ms_cr: 2000,
+      post_response_ms: 2000
     }
   };
 
@@ -192,7 +201,7 @@
       keySuffix: 'キー',
       keyInstruction: '聞こえた英単語の使い方が意味的に適切なら <strong>{yesKey}</strong>、不適切なら <strong>{noKey}</strong> を、できるだけ速く正確に押してください。',
       decisionPrompt: '聞こえた英単語の使い方を判断してください。',
-      timedInstruction: '音声終了後は、一定時間内に回答してください。時間内に反応がない場合は次の問題に進みます。',
+      timedInstruction: '音声終了後は、適切項目 {hit} ms・不適切項目 {cr} ms の制限時間内に回答してください。時間内に反応がない場合は次の問題に進みます。',
       untimedInstruction: '時間制限はありませんが、できるだけ速く正確に回答してください。',
       keyPromptFallback: 'F / J キーで判断してください。',
       keyPrompt: '適切 = {yesKey}、不適切 = {noKey} で判断してください。',
@@ -235,6 +244,7 @@
       researchDelivery: '実施モード',
       researchTiming: 'Timed設定',
       researchTimedValue: 'Timed: {ms} ms',
+      researchTimedConditionalValue: 'Timed: Hit {hit} ms / CR {cr} ms',
       researchUntimedValue: 'Untimed',
       researchAutoplay: '音声自動再生',
       researchFixation: '注視点',
@@ -259,9 +269,9 @@
       researchProfileBalanced: 'Balanced / Default',
       researchProfilePrecision: 'Precision / Validation',
       researchProfileCustomAdvice: '研究者設定です。方法欄では全設定値を明示し、同一研究内で条件を混在させないでください。',
-      researchProfileShortAdvice: '短時間実施・大規模調査向けです。群平均や粗いスクリーニングには有用ですが、個人スコアの強い解釈は避けてください。',
-      researchProfileBalancedAdvice: '通常の研究用途向けの標準候補です。群比較、相関、回帰分析で最も説明しやすい設定です。',
-      researchProfilePrecisionAdvice: '妥当性検証・個人差研究向けです。時短より精度と固定長版との比較可能性を優先します。',
+      researchProfileShortAdvice: '授業・短時間スクリーニング向けです。Untimed + Space進行で負荷を抑え、群平均や粗いスクリーニングを主目的にしてください。',
+      researchProfileBalancedAdvice: '通常の研究用途向けの標準候補です。Timed + 自動進行、Hit 1600 ms / CR 2000 msで、群比較、相関、回帰分析に使いやすい設定です。',
+      researchProfilePrecisionAdvice: '妥当性検証・個人差研究向けです。Timed + 自動進行、Hit 1600 ms / CR 2000 msで、時短より精度と比較可能性を優先します。',
       researchMethodsTitle: 'Methods用記述',
       researchClassroomTitle: '教員・実施者向け説明',
       researchPanelHelpLabel: '研究者・教員向けヘルプ',
@@ -357,8 +367,8 @@
       researchReferenceReadmeLink: '完全な参考文献リストはREADMEを参照してください。',
       researchTimedOption: 'Timed',
       researchUntimedOption: 'Untimed',
-      researchWindowPresetLabel: 'Timed制限時間',
-      researchWindowCustomLabel: 'カスタム制限時間 (ms)',
+      researchWindowHitLabel: 'Hit / 適切 制限時間 (ms)',
+      researchWindowCrLabel: 'CR / 不適切 制限時間 (ms)',
       researchApplyProtocol: '設定をURLに反映',
       researchParticipantUrlLabel: '参加者用URL',
       researchCopyUrl: 'URLをコピー',
@@ -374,7 +384,7 @@
       researchCalibrationSafetySafe: '安全',
       researchCalibrationSafetyCaution: '注意',
       researchCalibrationSafetyBlocked: '要修正',
-      researchTimedHelp: '1250 ms は既定値です。比較研究では 1000 / 1250 / 1500 ms などをURLで固定してください。',
+      researchTimedHelp: '研究用途の既定値は Hit 1600 ms / CR 2000 ms です。CRは意味的不整合の検出を含むため長めに設定します。',
       researchUntimedHelp: 'Untimedでは制限時間を設けず、RTは通常どおり記録されます。',
       researchItemSummaryTitle: '項目プール要約',
       researchItemCount: '項目数',
@@ -477,7 +487,7 @@
       keySuffix: 'key',
       keyInstruction: 'If the word you heard was semantically appropriate, press <strong>{yesKey}</strong>. If it was inappropriate, press <strong>{noKey}</strong>. Respond as quickly and accurately as possible.',
       decisionPrompt: 'Judge the word you heard in context.',
-      timedInstruction: 'After the audio ends, respond within the time limit. If no response is made in time, the test moves to the next trial.',
+      timedInstruction: 'After the audio ends, respond within the time limit: {hit} ms for Hit items and {cr} ms for CR items. If no response is made in time, the test moves to the next trial.',
       untimedInstruction: 'There is no time limit, but please respond as quickly and accurately as possible.',
       keyPromptFallback: 'Respond with the F / J keys.',
       keyPrompt: 'Appropriate = {yesKey}; Inappropriate = {noKey}.',
@@ -544,9 +554,9 @@
       researchProfileBalanced: 'Balanced / Default',
       researchProfilePrecision: 'Precision / Validation',
       researchProfileCustomAdvice: 'Researcher-defined protocol. Report all settings and avoid mixing protocols within the same study arm.',
-      researchProfileShortAdvice: 'For short large-scale or classroom administration. Useful for group-level screening; avoid strong individual-level interpretation.',
-      researchProfileBalancedAdvice: 'Standard candidate for general research use, group comparisons, correlations, and regression analyses.',
-      researchProfilePrecisionAdvice: 'For validation and individual-difference research. Prioritizes precision and fixed-form comparability over time saving.',
+      researchProfileShortAdvice: 'For classroom or short screening administration. Uses untimed, Space-key progression to reduce burden; interpret mainly at the group or low-stakes screening level.',
+      researchProfileBalancedAdvice: 'Standard candidate for general research use. Uses timed auto-advance with Hit 1600 ms / CR 2000 ms, suitable for group comparisons, correlations, and regression analyses.',
+      researchProfilePrecisionAdvice: 'For validation and individual-difference research. Uses timed auto-advance with Hit 1600 ms / CR 2000 ms, prioritizing precision and comparability over time saving.',
       researchMethodsTitle: 'Methods Text',
       researchClassroomTitle: 'Instructor / Administrator Text',
       researchPanelHelpLabel: 'Researcher and instructor help',
@@ -642,8 +652,8 @@
       researchReferenceReadmeLink: 'See the README for the full reference list.',
       researchTimedOption: 'Timed',
       researchUntimedOption: 'Untimed',
-      researchWindowPresetLabel: 'Timed response window',
-      researchWindowCustomLabel: 'Custom window (ms)',
+      researchWindowHitLabel: 'Hit / appropriate window (ms)',
+      researchWindowCrLabel: 'CR / inappropriate window (ms)',
       researchApplyProtocol: 'Apply to URL',
       researchParticipantUrlLabel: 'Participant URL',
       researchCopyUrl: 'Copy URL',
@@ -659,7 +669,7 @@
       researchCalibrationSafetySafe: 'Safe',
       researchCalibrationSafetyCaution: 'Caution',
       researchCalibrationSafetyBlocked: 'Needs fix',
-      researchTimedHelp: '1250 ms is the default. For comparison studies, fix 1000 / 1250 / 1500 ms or similar values in the URL.',
+      researchTimedHelp: 'Research-use defaults are Hit 1600 ms / CR 2000 ms. CR receives a longer window because detecting semantic mismatch is slower.',
       researchUntimedHelp: 'Untimed has no response deadline; RT is still recorded.',
       researchItemSummaryTitle: 'Item Pool Summary',
       researchItemCount: 'Items',
@@ -750,7 +760,12 @@
   }
 
   function boundedNumberParam (params, name, def, min, max, integer) {
-    const raw = params.get(name);
+    const names = Array.isArray(name) ? name : [name];
+    let raw = null;
+    for (let i = 0; i < names.length; i++) {
+      raw = params.get(names[i]);
+      if (raw !== null) break;
+    }
     return boundedNumberValue(raw, def, min, max, integer);
   }
 
@@ -942,6 +957,25 @@
       p, 'response_window_ms',
       Number(presentationOption('responseWindowMs', DEFAULTS.response_window_ms)),
       250, 10000, true);
+    state.params.response_window_ms_hit = boundedNumberParam(
+      p, ['response_window_ms_hit', 'response_window_hit_ms', 'response_window_ms_appropriate'],
+      p.has('response_window_ms')
+        ? state.params.response_window_ms
+        : profileDefault(
+            'response_window_ms_hit',
+            Number(presentationOption('responseWindowMsHit', DEFAULTS.response_window_ms_hit))
+          ),
+      250, 10000, true);
+    state.params.response_window_ms_cr = boundedNumberParam(
+      p, ['response_window_ms_cr', 'response_window_cr_ms', 'response_window_ms_inappropriate'],
+      p.has('response_window_ms')
+        ? state.params.response_window_ms
+        : profileDefault(
+            'response_window_ms_cr',
+            Number(presentationOption('responseWindowMsCR', DEFAULTS.response_window_ms_cr))
+          ),
+      250, 10000, true);
+    state.params.response_window_ms = state.params.response_window_ms_hit;
     state.params.auto_play_audio = booleanParam(
       p,
       ['auto_play_audio', 'autoplay'],
@@ -959,7 +993,10 @@
       0, 3000, true);
     state.params.post_response_ms = boundedNumberParam(
       p, 'post_response_ms',
-      Number(presentationOption('postResponseMs', DEFAULTS.post_response_ms)),
+      profileDefault(
+        'post_response_ms',
+        Number(presentationOption('postResponseMs', DEFAULTS.post_response_ms))
+      ),
       0, 5000, true);
     state.params.pace = booleanParam(p, 'self_paced', false)
       ? 'self'
@@ -986,7 +1023,7 @@
     // Live theta is unaffected; auxiliary `theta_*_nt<NNN>` columns are added
     // in summary. Default 350 ms; lower-proficiency populations may use 500 ms.
     // Bounded to [50, 2000] ms — anything below 50 ms is implausible and any
-    // threshold above 2000 ms exceeds the standard 1250 ms response window.
+    // threshold above 2000 ms exceeds the standard CR response window.
     state.params.nt_threshold_ms = boundedNumberParam(
       p, 'nt_threshold_ms', DEFAULTS.nt_threshold_ms, 50, 2000, true);
     normalizeThetaGridParams();
@@ -1219,6 +1256,67 @@
     return isTimed() ? state.params.response_window_ms : null;
   }
 
+  function normalizeItemCondition (raw) {
+    const value = String(raw || '').trim().toLowerCase();
+    if (['hit', 'appropriate', 'yes', 'y', '適切'].includes(value)) return 'Hit';
+    if (['cr', 'inappropriate', 'no', 'n', '不適切'].includes(value)) return 'CR';
+    return '';
+  }
+
+  function itemCondition (item) {
+    if (!item) return '';
+    return normalizeItemCondition(item.condition) || normalizeItemCondition(item.ANSWER);
+  }
+
+  function responseWindowMsForCondition (condition) {
+    if (!isTimed()) return null;
+    const normalized = normalizeItemCondition(condition);
+    if (normalized === 'CR') return Number(state.params.response_window_ms_cr);
+    if (normalized === 'Hit') return Number(state.params.response_window_ms_hit);
+    return Number(state.params.response_window_ms);
+  }
+
+  function responseWindowMsForItem (item) {
+    return responseWindowMsForCondition(itemCondition(item));
+  }
+
+  function responseWindowSettings (overrides) {
+    const o = overrides || {};
+    const fallback = boundedNumberValue(
+      o.response_window_ms === undefined ? state.params.response_window_ms : o.response_window_ms,
+      DEFAULTS.response_window_ms,
+      250,
+      10000,
+      true
+    );
+    const hit = boundedNumberValue(
+      o.response_window_ms_hit === undefined ? state.params.response_window_ms_hit : o.response_window_ms_hit,
+      fallback,
+      250,
+      10000,
+      true
+    );
+    const cr = boundedNumberValue(
+      o.response_window_ms_cr === undefined ? state.params.response_window_ms_cr : o.response_window_ms_cr,
+      fallback,
+      250,
+      10000,
+      true
+    );
+    return {
+      legacy: fallback,
+      hit: hit,
+      cr: cr,
+      same: hit === cr
+    };
+  }
+
+  function responseWindowTextFromSettings (settings) {
+    const s = settings || responseWindowSettings();
+    if (s.same) return t('researchTimedValue', { ms: s.hit });
+    return t('researchTimedConditionalValue', { hit: s.hit, cr: s.cr });
+  }
+
   function deliveryPathname (pathname, delivery) {
     const target = normalizeDelivery(delivery);
     const replacement = '/' + target + '/';
@@ -1239,15 +1337,7 @@
     u.hash = '';
     const delivery = normalizeDelivery(opts.delivery || state.delivery);
     const mode = normalizeTiming(opts.timing || state.params.timing);
-    const ms = boundedNumberValue(
-      opts.response_window_ms === undefined
-        ? state.params.response_window_ms
-        : opts.response_window_ms,
-      DEFAULTS.response_window_ms,
-      250,
-      10000,
-      true
-    );
+    const windowSettings = responseWindowSettings(opts);
     const autoPlay = opts.auto_play_audio === undefined
       ? autoPlayAudio()
       : !!opts.auto_play_audio;
@@ -1355,9 +1445,19 @@
     u.searchParams.set('theta2_max', String(theta2Max));
     u.searchParams.set('theta2_step', String(theta2Step));
     if (mode === 'timed') {
-      u.searchParams.set('response_window_ms', String(ms));
+      if (windowSettings.same) {
+        u.searchParams.set('response_window_ms', String(windowSettings.hit));
+        u.searchParams.delete('response_window_ms_hit');
+        u.searchParams.delete('response_window_ms_cr');
+      } else {
+        u.searchParams.delete('response_window_ms');
+        u.searchParams.set('response_window_ms_hit', String(windowSettings.hit));
+        u.searchParams.set('response_window_ms_cr', String(windowSettings.cr));
+      }
     } else {
       u.searchParams.delete('response_window_ms');
+      u.searchParams.delete('response_window_ms_hit');
+      u.searchParams.delete('response_window_ms_cr');
     }
     if (delivery === 'adaptive') {
       const adaptiveBounds = adaptiveItemBounds();
@@ -1514,7 +1614,10 @@
   function updateTimingInstruction () {
     const el = $('timing-instruction');
     if (!el) return;
-    el.textContent = isTimed() ? t('timedInstruction') : t('untimedInstruction');
+    const windows = responseWindowSettings();
+    el.textContent = isTimed()
+      ? t('timedInstruction', { hit: windows.hit, cr: windows.cr })
+      : t('untimedInstruction');
   }
 
   function stopResponseTimer () {
@@ -2060,7 +2163,9 @@
         max_items:      state.params.max_items,
         max_play_fails: state.params.max_play_fails,
         timing_mode:    state.params.timing,
-        response_window_ms: responseWindowMs()
+        response_window_ms: responseWindowMs(),
+        response_window_ms_hit: responseWindowSettings().hit,
+        response_window_ms_cr: responseWindowSettings().cr
       }),
       practice:  Object.assign({}, state.practice),
       responses: (state.responses || []).slice(),
@@ -2234,8 +2339,11 @@
   }
 
   function researchHelp (text) {
-    return '<abbr class="research-help" tabindex="0" title="' +
-      escapeHtml(text) + '" aria-label="' + escapeHtml(text) + '">?</abbr>';
+    return '<span class="research-help" tabindex="0" role="note" aria-label="' +
+      escapeHtml(text) + '">?' +
+      '<span class="research-help-tooltip" role="tooltip">' +
+        escapeHtml(text) +
+      '</span></span>';
   }
 
   function researchLabel (label, help) {
@@ -2305,11 +2413,6 @@
     };
   }
 
-  function responseWindowPreset () {
-    const ms = responseWindowMs() || DEFAULTS.response_window_ms;
-    return [750, 1000, 1250, 1500, 2000].includes(ms) ? String(ms) : 'custom';
-  }
-
   function setResearchStatus (messageKey, isError) {
     const el = $('research-protocol-status');
     if (!el) return;
@@ -2330,13 +2433,7 @@
     const o = overrides || {};
     const profile = normalizeProtocolProfile(o.protocol_profile || state.params.protocol_profile);
     const timing = normalizeTiming(o.timing || state.params.timing);
-    const responseWindow = boundedNumberValue(
-      o.response_window_ms === undefined ? state.params.response_window_ms : o.response_window_ms,
-      DEFAULTS.response_window_ms,
-      250,
-      10000,
-      true
-    );
+    const windowSettings = responseWindowSettings(o);
     const minItems = boundedNumberValue(o.min_items, state.params.min_items, 0, 160, true);
     const maxItems = boundedNumberValue(o.max_items, state.params.max_items, 1, 160, true);
     const algorithm = normalizeAlgorithm(o.algorithm || state.algorithm);
@@ -2364,9 +2461,13 @@
               : 'stop_pser=' + stopPser);
     const timingText = timing === 'timed'
       ? (state.lang === 'ja'
-          ? 'Timed条件（音声終了後 ' + responseWindow + ' ms）'
-          : 'timed administration with a ' + responseWindow + ' ms response window after audio offset')
+          ? 'Timed条件（音声終了後 Hit ' + windowSettings.hit + ' ms / CR ' + windowSettings.cr + ' ms）'
+          : 'timed administration with condition-specific response windows after audio offset (Hit ' + windowSettings.hit + ' ms; CR ' + windowSettings.cr + ' ms)')
       : (state.lang === 'ja' ? 'Untimed・自己ペース条件' : 'untimed, self-paced administration');
+    const pace = normalizePace(o.pace || state.params.pace);
+    const paceText = pace === 'self'
+      ? (state.lang === 'ja' ? 'Spaceキーによる自己ペース進行' : 'Space-key self-paced progression')
+      : (state.lang === 'ja' ? '回答後の自動進行' : 'auto-advance after response');
     const reportText = reportMode === 'none'
       ? (state.lang === 'ja'
           ? '受験者画面にはスコアレポートを表示しなかった'
@@ -2379,14 +2480,14 @@
         'プロファイルで実施した。CATはHit/CRの2条件別1D 2PL EAP推定で採点し、項目選択は ' +
         algorithm + ' アルゴリズムを用いた。停止則は ' +
         stopRule + '、最小項目数 ' + minItems + '、最大項目数 ' + maxItems +
-        '、' + stopConfigText + ' とした。実施は' + timingText +
+        '、' + stopConfigText + ' とした。実施は' + timingText + '、' + paceText +
         'で行い、' + reportText + '。F/Jキー割当、反応時間、停止理由、提示項目数、Hit/CR別項目数、全URL由来設定をExcelのmetadataおよびprotocol_manifestに保存した。';
     }
     return 'The LJT-CAT was administered using the ' + protocolProfileLabel(profile) +
       ' profile. The CAT was scored with per-condition Hit/CR 1D 2PL EAP estimation, and item selection used the ' +
       algorithm + ' algorithm. The stopping rule was ' +
       stopRule + ', with min_items=' + minItems + ', max_items=' + maxItems +
-      ', and ' + stopConfigText + '. Administration used ' + timingText +
+      ', and ' + stopConfigText + '. Administration used ' + timingText + ' and ' + paceText +
       '; ' + reportText + '. The F/J key mapping, response times, stopping reason, administered item count, Hit/CR counts, and URL-derived protocol settings were saved in the Excel metadata and protocol_manifest sheets.';
   }
 
@@ -2423,6 +2524,7 @@
 
   function researchProtocolSettings (overrides) {
     const o = overrides || {};
+    const windowSettings = responseWindowSettings(o);
     return {
       schema: 'ljt-cat-protocol',
       schema_version: 1,
@@ -2431,9 +2533,9 @@
       delivery: 'adaptive',
       protocol_profile: normalizeProtocolProfile(o.protocol_profile || state.params.protocol_profile),
       timing: normalizeTiming(o.timing || state.params.timing),
-      response_window_ms: boundedNumberValue(
-        o.response_window_ms === undefined ? state.params.response_window_ms : o.response_window_ms,
-        DEFAULTS.response_window_ms, 250, 10000, true),
+      response_window_ms: windowSettings.same ? windowSettings.hit : null,
+      response_window_ms_hit: windowSettings.hit,
+      response_window_ms_cr: windowSettings.cr,
       keymap: normalizeKeymap(o.keymap || state.params.keymap),
       auto_play_audio: o.auto_play_audio === undefined ? autoPlayAudio() : !!o.auto_play_audio,
       audio_rate: boundedNumberValue(
@@ -2632,8 +2734,8 @@
   function bindResearchPanelControls () {
     const profileEl = $('research-protocol-profile');
     const timingEl = $('research-timing-mode');
-    const presetEl = $('research-window-preset');
-    const customEl = $('research-window-custom');
+    const windowHitEl = $('research-window-hit');
+    const windowCrEl = $('research-window-cr');
     const keymapEl = $('research-keymap');
     const autoPlayEl = $('research-auto-play-audio');
     const audioRateEl = $('research-audio-rate');
@@ -2667,14 +2769,15 @@
     const importFileEl = $('research-import-protocol-file');
     const urlEl = $('research-participant-url');
     const helpEl = $('research-timing-help');
-    if (!timingEl || !presetEl || !customEl || !urlEl) return;
+    if (!timingEl || !windowHitEl || !windowCrEl || !urlEl) return;
 
     const readOverrides = () => {
       return {
         delivery: 'adaptive',
         protocol_profile: profileEl ? profileEl.value : state.params.protocol_profile,
         timing: timingEl.value,
-        response_window_ms: presetEl.value === 'custom' ? customEl.value : presetEl.value,
+        response_window_ms_hit: windowHitEl.value,
+        response_window_ms_cr: windowCrEl.value,
         keymap: keymapEl ? keymapEl.value : state.params.keymap,
         auto_play_audio: autoPlayEl ? autoPlayEl.value === '1' : autoPlayAudio(),
         audio_rate: audioRateEl ? audioRateEl.value : audioPlaybackRate(),
@@ -2704,11 +2807,9 @@
 
     const refreshControls = () => {
       const timed = normalizeTiming(timingEl.value) === 'timed';
-      const custom = presetEl.value === 'custom';
       const overrides = readOverrides();
-      presetEl.disabled = !timed;
-      customEl.disabled = !timed || !custom;
-      customEl.parentElement.classList.toggle('hidden', !timed || !custom);
+      windowHitEl.disabled = !timed;
+      windowCrEl.disabled = !timed;
       helpEl.textContent = timed ? t('researchTimedHelp') : t('researchUntimedHelp');
       if (thetaPointsEl) {
         const min = boundedNumberValue(overrides.theta_min, DEFAULTS.theta_min, -8, 0, false);
@@ -2767,6 +2868,15 @@
       if (!profile || profile.id === 'custom') return;
       if (timingEl) timingEl.value = profile.timing;
       if (paceEl) paceEl.value = profile.pace;
+      if (windowHitEl && profile.response_window_ms_hit !== undefined) {
+        windowHitEl.value = String(profile.response_window_ms_hit);
+      }
+      if (windowCrEl && profile.response_window_ms_cr !== undefined) {
+        windowCrEl.value = String(profile.response_window_ms_cr);
+      }
+      if (postResponseEl && profile.post_response_ms !== undefined) {
+        postResponseEl.value = String(profile.post_response_ms);
+      }
       if (algorithmEl) algorithmEl.value = profile.algorithm;
       if (stopRuleEl) stopRuleEl.value = profile.stop_rule;
       if (minItemsEl) minItemsEl.value = String(profile.min_items);
@@ -2783,8 +2893,8 @@
       });
     }
     timingEl.addEventListener('change', markCustomAndRefresh);
-    presetEl.addEventListener('change', markCustomAndRefresh);
-    customEl.addEventListener('input', markCustomAndRefresh);
+    windowHitEl.addEventListener('input', markCustomAndRefresh);
+    windowCrEl.addEventListener('input', markCustomAndRefresh);
     [
       keymapEl, autoPlayEl, audioRateEl, fixationEl, postResponseEl, paceEl, reportEl, maxRunEl, maxFailsEl,
       thetaMinEl, thetaMaxEl, thetaStepEl, theta2MinEl, theta2MaxEl, theta2StepEl,
@@ -2801,13 +2911,10 @@
         state.params.protocol_profile = normalizeProtocolProfile(overrides.protocol_profile);
         state.params.timing = normalizeTiming(overrides.timing);
         if (state.params.timing === 'timed') {
-          state.params.response_window_ms = boundedNumberValue(
-            overrides.response_window_ms,
-            DEFAULTS.response_window_ms,
-            250,
-            10000,
-            true
-          );
+          const windowSettings = responseWindowSettings(overrides);
+          state.params.response_window_ms_hit = windowSettings.hit;
+          state.params.response_window_ms_cr = windowSettings.cr;
+          state.params.response_window_ms = windowSettings.hit;
         }
         state.params.keymap = normalizeKeymap(overrides.keymap);
         state.params.auto_play_audio = !!overrides.auto_play_audio;
@@ -2866,6 +2973,8 @@
           protocol_profile: state.params.protocol_profile,
           timing_mode: state.params.timing,
           response_window_ms: responseWindowMs(),
+          response_window_ms_hit: responseWindowSettings().hit,
+          response_window_ms_cr: responseWindowSettings().cr,
           auto_play_audio: autoPlayAudio(),
           audio_rate: audioPlaybackRate(),
           fixation_ms: fixationMs(),
@@ -2983,6 +3092,35 @@
     applyResearchTableFilter();
   }
 
+  function bindResearchHelpControls () {
+    document.querySelectorAll('.research-panel-help').forEach(wrapper => {
+      const trigger = wrapper.querySelector('.research-panel-help-trigger');
+      const popover = wrapper.querySelector('.research-panel-help-popover');
+      if (!trigger || !popover) return;
+      const setOpen = open => {
+        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        popover.classList.toggle('is-visible', open);
+      };
+      trigger.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const nextOpen = trigger.getAttribute('aria-expanded') !== 'true';
+        setOpen(nextOpen);
+        if (nextOpen) {
+          window.setTimeout(() => {
+            const closeOnOutsideClick = outsideEvent => {
+              if (!wrapper.contains(outsideEvent.target)) setOpen(false);
+            };
+            document.addEventListener('click', closeOnOutsideClick, { once: true });
+          }, 0);
+        }
+      });
+      trigger.addEventListener('keydown', event => {
+        if (event.key === 'Escape') setOpen(false);
+      });
+    });
+  }
+
   function renderResearchPanel () {
     const panel = $('research-panel');
     if (!panel) return;
@@ -2996,13 +3134,12 @@
     const form = adaptiveSource.form;
     const rows = researchItemRows();
     const itemSummary = summarizeResearchItems(rows);
+    const windowSettings = responseWindowSettings();
     const timing = isTimed()
-      ? t('researchTimedValue', { ms: responseWindowMs() })
+      ? responseWindowTextFromSettings(windowSettings)
       : t('researchUntimedValue');
     const model = 'full 160-item per-condition 1D 2PL blueprint CAT (mod_hit / mod_cr)';
     const note = t('researchAdaptiveNote');
-    const preset = responseWindowPreset();
-    const currentWindow = responseWindowMs() || DEFAULTS.response_window_ms;
     const keymap = normalizeKeymap(state.params.keymap);
     const adaptiveBounds = adaptiveItemBounds();
     const protocolProfile = normalizeProtocolProfile(state.params.protocol_profile);
@@ -3141,7 +3278,7 @@
       '<div class="research-panel-help">' +
         '<button type="button" class="research-panel-help-trigger" aria-label="' +
           escapeHtml(t('researchPanelHelpLabel')) +
-          '" aria-describedby="research-panel-help-popover">?</button>' +
+          '" aria-describedby="research-panel-help-popover" aria-expanded="false">?</button>' +
         '<div id="research-panel-help-popover" class="research-panel-help-popover" role="tooltip">' +
           '<strong>' + escapeHtml(t('researchPanelHelpTitle')) + '</strong>' +
           '<dl>' +
@@ -3176,18 +3313,12 @@
               '<option value="untimed"' + (!isTimed() ? ' selected' : '') + '>' +
                 escapeHtml(t('researchUntimedOption')) + '</option>' +
             '</select></label>' +
-          '<label><span>' + escapeHtml(t('researchWindowPresetLabel')) + '</span>' +
-            '<select id="research-window-preset">' +
-              [750, 1000, 1250, 1500, 2000].map(ms =>
-                '<option value="' + ms + '"' + (preset === String(ms) ? ' selected' : '') +
-                '>' + ms + ' ms</option>'
-              ).join('') +
-              '<option value="custom"' + (preset === 'custom' ? ' selected' : '') +
-                '>custom</option>' +
-            '</select></label>' +
-          '<label><span>' + escapeHtml(t('researchWindowCustomLabel')) + '</span>' +
-            '<input type="number" id="research-window-custom" min="250" max="10000" step="50" value="' +
-              escapeHtml(currentWindow) + '" /></label>' +
+          '<label><span>' + escapeHtml(t('researchWindowHitLabel')) + '</span>' +
+            '<input type="number" id="research-window-hit" min="250" max="10000" step="50" value="' +
+              escapeHtml(windowSettings.hit) + '" /></label>' +
+          '<label><span>' + escapeHtml(t('researchWindowCrLabel')) + '</span>' +
+            '<input type="number" id="research-window-cr" min="250" max="10000" step="50" value="' +
+              escapeHtml(windowSettings.cr) + '" /></label>' +
           '<label><span>' + escapeHtml(t('researchAudioAutoplayLabel')) + '</span>' +
             '<select id="research-auto-play-audio">' +
               '<option value="1"' + (autoPlayAudio() ? ' selected' : '') + '>' +
@@ -3392,6 +3523,7 @@
             '</tr></thead><tbody>' + rowHtml + '</tbody></table></div>'
         : '<p>' + escapeHtml(t('researchNoItems')) + '</p>');
     bindResearchPanelControls();
+    bindResearchHelpControls();
     bindResearchTableFilters();
   }
 
@@ -3571,7 +3703,9 @@
       setStatus(t('audioEnded', { prompt: responseKeyPrompt() }));
       logEvent('target_onset', {
         targetword: targetword,
-        response_window_ms: responseWindowMs()
+        response_window_ms: responseWindowMsForCondition(
+          state.currentTrialContext ? state.currentTrialContext.condition : ''
+        )
       });
       sendReady();
     }
@@ -3684,7 +3818,7 @@
       step: idx + 1,
       item_id: item.item_id || ('practice_' + (idx + 1)),
       targetword: item.targetword,
-      condition: item.condition || ''
+      condition: itemCondition(item)
     };
     $('trial-counter').textContent = t('practiceCounter', { n: idx + 1 });
     announceForScreenReader(state.lang === 'ja'
@@ -3704,7 +3838,7 @@
           response_modality: null,
           keymap_id: state.responseMapping ? state.responseMapping.keymap_id : null,
           timed_out: false,
-          response_window_ms: responseWindowMs(),
+          response_window_ms: responseWindowMsForItem(item),
           audio_playback_rate: audioPlaybackRate(),
           audio_failed: true
         });
@@ -3724,7 +3858,7 @@
         answered = true;
         onPracticeResponse(item, r, details);
       };
-      wireResponseInput(respond, { responseWindowMs: responseWindowMs() });
+      wireResponseInput(respond, { responseWindowMs: responseWindowMsForItem(item) });
     });
   }
 
@@ -3746,7 +3880,7 @@
       response_modality: d.response_modality || null,
       keymap_id: d.keymap_id || (state.responseMapping ? state.responseMapping.keymap_id : null),
       timed_out: timedOut,
-      response_window_ms: d.response_window_ms || responseWindowMs(),
+      response_window_ms: d.response_window_ms || responseWindowMsForItem(item),
       audio_playback_rate: audioPlaybackRate()
     });
     logEvent('practice_response_committed', {
@@ -3795,6 +3929,8 @@
       delivery: state.delivery,
       timing_mode: state.params.timing,
       response_window_ms: responseWindowMs(),
+      response_window_ms_hit: responseWindowSettings().hit,
+      response_window_ms_cr: responseWindowSettings().cr,
       min_items: state.params.min_items,
       max_items: state.params.max_items
     });
@@ -3933,7 +4069,7 @@
         answered = true;
         onMainResponse(it, r, details);
       };
-      wireResponseInput(respond, { responseWindowMs: responseWindowMs() });
+      wireResponseInput(respond, { responseWindowMs: responseWindowMsForItem(it) });
     });
   }
 
@@ -3959,7 +4095,7 @@
         response_modality: null,
         keymap_id: state.responseMapping ? state.responseMapping.keymap_id : null,
         timed_out: false,
-        response_window_ms: responseWindowMs(),
+        response_window_ms: responseWindowMsForItem(item),
         audio_playback_rate: audioPlaybackRate()
       });
     }
@@ -3983,7 +4119,7 @@
       response_modality: d.response_modality || null,
       keymap_id: d.keymap_id || (state.responseMapping ? state.responseMapping.keymap_id : null),
       timed_out: timedOut,
-      response_window_ms: d.response_window_ms || responseWindowMs(),
+      response_window_ms: d.response_window_ms || responseWindowMsForItem(item),
       audio_playback_rate: audioPlaybackRate()
     };
     if (response === null) {
@@ -4399,7 +4535,11 @@
       timing: {
         mode: state.params.timing,
         response_window_ms: responseWindowMs(),
+        response_window_ms_hit: responseWindowSettings().hit,
+        response_window_ms_cr: responseWindowSettings().cr,
         default_response_window_ms: DEFAULTS.response_window_ms,
+        default_response_window_ms_hit: DEFAULTS.response_window_ms_hit,
+        default_response_window_ms_cr: DEFAULTS.response_window_ms_cr,
         lower_bound_ms: 250,
         upper_bound_ms: 10000
       },
@@ -4834,6 +4974,8 @@
     state.session.theta2_grid_points = thetaGrid2DPointCount();
     state.session.timing_mode = state.params.timing;
     state.session.response_window_ms = responseWindowMs();
+    state.session.response_window_ms_hit = responseWindowSettings().hit;
+    state.session.response_window_ms_cr = responseWindowSettings().cr;
     // NT-filtered auxiliary scoring config (Wise & Ma 2012). Live theta is
     // not affected; theta_*_<NT_TAG> columns are written alongside naive theta_*.
     state.session.nt_threshold_ms = state.params.nt_threshold_ms;
@@ -4957,7 +5099,9 @@
         max_items:      state.params.max_items,
         max_play_fails: state.params.max_play_fails,
         timing_mode:    state.params.timing,
-        response_window_ms: responseWindowMs()
+        response_window_ms: responseWindowMs(),
+        response_window_ms_hit: responseWindowSettings().hit,
+        response_window_ms_cr: responseWindowSettings().cr
       }),
       practice:  Object.assign({}, state.practice),
       final:     finalObj,
@@ -5084,7 +5228,9 @@
       delivery: state.delivery,
       language: state.lang,
       timing_mode: state.params.timing,
-      response_window_ms: responseWindowMs()
+      response_window_ms: responseWindowMs(),
+      response_window_ms_hit: responseWindowSettings().hit,
+      response_window_ms_cr: responseWindowSettings().cr
     });
     document.addEventListener('visibilitychange', () => {
       logEvent('visibility_change', { visibility_state: document.visibilityState });
