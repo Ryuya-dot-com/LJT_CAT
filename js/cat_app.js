@@ -22,8 +22,8 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '2.8.4';
-  const ASSET_CACHE_VERSION = '20260531f';
+  const APP_VERSION = '2.8.5';
+  const ASSET_CACHE_VERSION = '20260531g';
   const UX_INSTRUCTION_VERSION = 'practice_instructions_20260428_refined';
   // Captured at script-eval time so it can be reported as `code_loaded_at`
   // build/repro metadata in the Excel output (alongside session save time).

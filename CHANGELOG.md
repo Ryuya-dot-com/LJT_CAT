@@ -118,6 +118,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Field-level researcher help tooltips no longer remain visible after mouse
+  clicks; they now show on hover and keyboard `:focus-visible` only.
 - Researcher-panel help icons now use visible custom tooltips and the top-right
   help popover can be opened by hover, focus, or click.
 - `adaptive/index.html` was missing the `<script>` tag for

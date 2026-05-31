@@ -217,7 +217,7 @@ h3 {
   line-height: 1.45;
 }
 .research-panel-help:hover .research-panel-help-popover,
-.research-panel-help:focus-within .research-panel-help-popover,
+.research-panel-help-trigger:focus-visible + .research-panel-help-popover,
 .research-panel-help-popover.is-visible {
   display: block;
 }
@@ -331,7 +331,7 @@ h3 {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
-.research-help-tooltip {
+.research-help .research-help-tooltip {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -351,8 +351,7 @@ h3 {
   white-space: normal;
 }
 .research-help:hover .research-help-tooltip,
-.research-help:focus .research-help-tooltip,
-.research-help:focus-within .research-help-tooltip {
+.research-help:focus-visible .research-help-tooltip {
   display: block;
 }
 .research-grid-points {
