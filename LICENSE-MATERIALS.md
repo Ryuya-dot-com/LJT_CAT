@@ -55,7 +55,8 @@ GitHub issues page.
 
 When publishing research that uses these materials, please cite:
 
-> Saito et al. (in preparation). *LJT_Short: Validation of the
+> Kazuya Saito, Kotaro Takizawa, Izumi Hosaka, Yui Suzukida, Ryuya Komuro,
+> Takumi Uchihara & Andrea Révész (in preparation). *LJT_Short: Validation of the
 > Lexicosemantic Judgment Task as a Rapid Measure of L2 Listening
 > Proficiency in EFL Classrooms*.
 

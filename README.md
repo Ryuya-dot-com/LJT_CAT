@@ -1027,6 +1027,7 @@ under the Apache License 2.0 by its original authors.
 
 When publishing research that uses LJT-CAT, please cite:
 
-> Saito et al. (in preparation). *LJT_Short: Validation of the
+> Kazuya Saito, Kotaro Takizawa, Izumi Hosaka, Yui Suzukida, Ryuya Komuro,
+> Takumi Uchihara & Andrea Révész (in preparation). *LJT_Short: Validation of the
 > Lexicosemantic Judgment Task as a Rapid Measure of L2 Listening
 > Proficiency in EFL Classrooms*.
